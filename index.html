@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interlocking Hex Tiles</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #sidebar {
+    width: 300px;
+    padding: 24px;
+    background: #16213e;
+    overflow-y: auto;
+    flex-shrink: 0;
+    border-right: 1px solid #2a2a4e;
+  }
+  #main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
+  }
+  canvas {
+    display: block;
+    background: #0f3460;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; color: #e94560; }
+  .subtitle { font-size: 12px; color: #777; margin-bottom: 20px; }
+  .section { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #555; margin: 20px 0 10px; border-top: 1px solid #2a2a4e; padding-top: 14px; }
+  .group { margin-bottom: 14px; }
+  .group label { display: block; font-size: 13px; margin-bottom: 4px; color: #bbb; }
+  .group label span { float: right; color: #e94560; font-weight: bold; }
+  input[type=range] { width: 100%; accent-color: #e94560; }
+  .cb { margin-bottom: 10px; }
+  .cb label { font-size: 13px; color: #bbb; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .cb input { accent-color: #e94560; }
+  #export-btn {
+    width: 100%; padding: 10px; background: #e94560; color: white;
+    border: none; border-radius: 6px; cursor: pointer; font-size: 13px; margin-top: 8px;
+  }
+  #export-btn:hover { background: #c73650; }
+  .info { font-size: 11px; color: #555; margin-top: 16px; line-height: 1.6; }
+
+  /* Interlock gauge */
+  .gauge { margin: 16px 0 6px; }
+  .gauge-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #555; margin-bottom: 8px; border-top: 1px solid #2a2a4e; padding-top: 14px; }
+  .gauge-track {
+    height: 10px; border-radius: 5px; position: relative;
+    background: linear-gradient(to right, #2a9d8f, #f4a261 45%, #e94560 80%, #a00030);
+    overflow: visible;
+  }
+  .gauge-pip {
+    position: absolute; top: -3px; width: 4px; height: 16px;
+    background: #fff; border-radius: 2px;
+    transform: translateX(-2px);
+    box-shadow: 0 0 6px rgba(255,255,255,0.5);
+    transition: left 0.1s ease;
+  }
+  .gauge-labels {
+    display: flex; justify-content: space-between;
+    font-size: 10px; color: #777; margin-top: 5px;
+  }
+  .gauge-readout {
+    text-align: center; font-size: 13px; font-weight: bold;
+    margin-top: 6px; letter-spacing: 0.5px;
+  }
+  .gauge-detail {
+    text-align: center; font-size: 10px; color: #666; margin-top: 2px;
+  }
+  select, input[type=number] {
+    background: #1a1a2e; color: #eee; border: 1px solid #2a2a4e;
+    border-radius: 4px; padding: 3px 6px; font-size: 12px;
+  }
+  select { cursor: pointer; }
+  input[type=number] { width: 70px; }
+  .export-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .export-row label { font-size: 12px; color: #bbb; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h1>Hex Tile Twist</h1>
+  <div class="subtitle">Soft-interlocking hexagonal tiles</div>
+
+  <div class="section">Twist Parameters</div>
+  <div class="group">
+    <label>Twist Angle <span id="v-angle">8.0&deg;</span></label>
+    <input type="range" id="angle" min="-55" max="55" step="0.5" value="8">
+  </div>
+  <div class="group">
+    <label>Twist Radius <span id="v-radius">0.30 &times; side</span></label>
+    <input type="range" id="radius" min="0" max="0.5" step="0.01" value="0.30">
+  </div>
+
+  <div class="group">
+    <label>Edge Rounding <span id="v-round-edge">0.00 &times; side</span></label>
+    <input type="range" id="round-edge" min="0" max="0.25" step="0.005" value="0">
+  </div>
+  <div class="group">
+    <label>Vertex Rounding <span id="v-round-vtx">0.00 &times; side</span></label>
+    <input type="range" id="round-vtx" min="0" max="0.25" step="0.005" value="0">
+  </div>
+  <div class="group">
+    <label>Tile Thickness <span id="v-thickness">1.5 mm</span></label>
+    <input type="range" id="thickness" min="0.5" max="6" step="0.1" value="1.5">
+  </div>
+
+  <div class="section">Display</div>
+  <div class="group">
+    <label>Tile Side Length <span id="v-size">60 px</span></label>
+    <input type="range" id="size" min="25" max="120" step="1" value="60">
+  </div>
+  <div class="group">
+    <label>Grid Rings <span id="v-grid">3</span></label>
+    <input type="range" id="grid" min="1" max="6" step="1" value="3">
+  </div>
+  <div class="group">
+    <label>Explode <span id="v-explode">0%</span></label>
+    <input type="range" id="explode" min="0" max="60" step="1" value="0">
+  </div>
+
+  <div class="section">Options</div>
+  <div class="cb"><label><input type="checkbox" id="angular" checked> Angular joints</label></div>
+  <div class="cb"><label><input type="checkbox" id="show-original"> Show original hex</label></div>
+  <div class="cb"><label><input type="checkbox" id="show-circles"> Show twist circles</label></div>
+  <div class="cb"><label><input type="checkbox" id="show-single" checked> Show isolated tile</label></div>
+  <div class="cb"><label><input type="checkbox" id="show-junction" checked> Show 3-tile junction</label></div>
+  <div class="group" style="margin-top: 10px;">
+    <label>Color Scheme
+      <select id="scheme" style="float: right;">
+        <option value="0">Neon</option>
+        <option value="1">Ocean</option>
+        <option value="2">Earth</option>
+        <option value="3">Berry</option>
+        <option value="4">Slate</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="gauge">
+    <div class="gauge-label">Interlock Feel</div>
+    <div class="gauge-track"><div class="gauge-pip" id="gauge-pip"></div></div>
+    <div class="gauge-labels">
+      <span>Loose</span>
+      <span>Snug</span>
+      <span>Firm</span>
+      <span>Locked</span>
+    </div>
+    <div class="gauge-readout" id="gauge-readout">Snug</div>
+    <div class="gauge-detail" id="gauge-detail">tab depth ≈ 0.0 mm</div>
+  </div>
+
+  <div class="export-row">
+    <label>Side <input type="number" id="export-size" min="5" max="500" step="1" value="50"> mm</label>
+  </div>
+  <button id="export-btn">Export Tile as SVG</button>
+
+  <div class="info">
+    At each vertex where 3 tiles meet, the edges are "twisted" by the twist
+    angle within the twist radius. Each edge gets a small tab at one end and a
+    notch at the other &mdash; tiles softly interlock, easy to place from above
+    but resistant to sliding apart. The tiles still meet at each vertex point
+    (no voids). Tab depth &asymp; r &times; sin(&theta;).
+  </div>
+</div>
+
+<div id="main">
+  <canvas id="c"></canvas>
+</div>
+
+<script>
+// ============================================================
+//  Constants & utilities
+// ============================================================
+const TAU = Math.PI * 2;
+const sqrt3 = Math.sqrt(3);
+const cvs = document.getElementById('c');
+const ctx = cvs.getContext('2d');
+
+function deg(d) { return d * Math.PI / 180; }
+
+// ============================================================
+//  Hex geometry
+// ============================================================
+
+// Flat-top hex vertices (CCW), vertex 0 at the right
+function hexVerts(cx, cy, s) {
+  const v = [];
+  for (let i = 0; i < 6; i++) {
+    const a = TAU * i / 6;            // 0, 60, 120, 180, 240, 300 deg
+    v.push({ x: cx + s * Math.cos(a), y: cy + s * Math.sin(a) });
+  }
+  return v;
+}
+
+// Axial (q, r) -> pixel centre
+function hex2px(q, r, s) {
+  return { x: s * 1.5 * q, y: s * sqrt3 * (r + 0.5 * q) };
+}
+
+// Hex grid with the given number of rings
+function hexGrid(rings) {
+  const cells = [];
+  for (let q = -rings; q <= rings; q++)
+    for (let r = Math.max(-rings, -q - rings); r <= Math.min(rings, -q + rings); r++)
+      cells.push({ q, r });
+  return cells;
+}
+
+// Proper 3-colouring of the hex grid (no two neighbours share a colour)
+function hexColor3(q, r) { return (((q - r) % 3) + 3) % 3; }
+
+// ============================================================
+//  Modified tile outline  (the core algorithm)
+//
+//  At each tiling vertex V (shared by 3 tiles) the tile still
+//  comes to a point at V, but the two edges meeting at V are
+//  each "twisted" by theta within distance r of V.
+//
+//  Path at each vertex:
+//
+//    P_in  →  Q_in  →  V  →  Q_out  →  P_out
+//
+//  P_in / P_out sit on the original hex edges at distance r from V.
+//  Q_in / Q_out are those points rotated by +theta around V.
+//
+//  The segment P_in→Q_in is a small jog (tab on one side,
+//  notch on the other).  Similarly Q_out→P_out.
+//  Between vertices, the boundary follows the original hex edge.
+//
+//  Because V is still on the boundary, there is NO void at any
+//  vertex — the three tiles meet cleanly at every junction.
+// ============================================================
+
+// Each point gets a .vtx flag: true for the vertex intersection
+// points (V), false for everything else (jog / edge points).
+// This lets us apply different rounding radii to each type.
+
+function tileOutline(cx, cy, s, r, thetaDeg, useAngular) {
+  const verts = hexVerts(cx, cy, s);
+  if (r < 0.001 || Math.abs(thetaDeg) < 0.01)
+    return verts.map(v => ({ x: v.x, y: v.y, vtx: true }));
+
+  const theta = deg(thetaDeg);
+  const pts = [];
+  const push = (x, y, vtx) => pts.push({ x, y, vtx: !!vtx });
+
+  for (let i = 0; i < 6; i++) {
+    const V  = verts[i];
+    const Vp = verts[(i + 5) % 6];
+    const Vn = verts[(i + 1) % 6];
+
+    const ap = Math.atan2(Vp.y - V.y, Vp.x - V.x);
+    const an = Math.atan2(Vn.y - V.y, Vn.x - V.x);
+
+    // P_in  (edge point)
+    push(V.x + r * Math.cos(ap), V.y + r * Math.sin(ap), false);
+
+    // Q_in  (edge point(s) — tab jog)
+    if (useAngular) {
+      push(V.x + r * Math.cos(ap + theta), V.y + r * Math.sin(ap + theta), false);
+    } else {
+      const arcN = Math.max(3, Math.round(8 * Math.abs(theta) / (TAU / 3)));
+      for (let j = 1; j <= arcN; j++) {
+        const a = ap + theta * j / arcN;
+        push(V.x + r * Math.cos(a), V.y + r * Math.sin(a), false);
+      }
+    }
+
+    // V  (VERTEX intersection point)
+    push(V.x, V.y, true);
+
+    // Q_out  (edge point(s) — notch jog)
+    if (useAngular) {
+      push(V.x + r * Math.cos(an + theta), V.y + r * Math.sin(an + theta), false);
+    } else {
+      push(V.x + r * Math.cos(an + theta), V.y + r * Math.sin(an + theta), false);
+      const arcN = Math.max(3, Math.round(8 * Math.abs(theta) / (TAU / 3)));
+      for (let j = 1; j < arcN; j++) {
+        const a = an + theta * (1 - j / arcN);
+        push(V.x + r * Math.cos(a), V.y + r * Math.sin(a), false);
+      }
+    }
+
+    // P_out  (edge point)
+    push(V.x + r * Math.cos(an), V.y + r * Math.sin(an), false);
+  }
+  return pts;
+}
+
+// ============================================================
+//  Corner rounding
+//
+//  Replace each sharp corner with a circular arc.
+//  Each point carries a .vtx flag — vertex intersection points
+//  use vtxRadius, all other corners use edgeRadius.
+// ============================================================
+
+function roundCorners(pts, edgeRadius, vtxRadius) {
+  if (pts.length < 3) return pts;
+  if (edgeRadius < 0.001 && vtxRadius < 0.001) return pts;
+
+  const n = pts.length;
+  const out = [];
+  const ARC_SEGS = 6;
+
+  for (let i = 0; i < n; i++) {
+    const A = pts[(i - 1 + n) % n];
+    const B = pts[i];
+    const C = pts[(i + 1) % n];
+
+    const radius = B.vtx ? vtxRadius : edgeRadius;
+    if (radius < 0.001) { out.push(B); continue; }
+
+    let dxBA = A.x - B.x, dyBA = A.y - B.y;
+    let dxBC = C.x - B.x, dyBC = C.y - B.y;
+    const lenBA = Math.sqrt(dxBA * dxBA + dyBA * dyBA);
+    const lenBC = Math.sqrt(dxBC * dxBC + dyBC * dyBC);
+
+    if (lenBA < 0.001 || lenBC < 0.001) { out.push(B); continue; }
+
+    dxBA /= lenBA; dyBA /= lenBA;
+    dxBC /= lenBC; dyBC /= lenBC;
+
+    const dot = dxBA * dxBC + dyBA * dyBC;
+    const halfAngle = Math.acos(Math.max(-1, Math.min(1, dot))) / 2;
+
+    if (halfAngle < 0.001 || halfAngle > Math.PI - 0.001) {
+      out.push(B); continue;
+    }
+
+    const tan_ha = Math.tan(halfAngle);
+    let d = radius / tan_ha;
+
+    const maxD = Math.min(lenBA, lenBC) * 0.45;
+    if (d > maxD) d = maxD;
+    const actualR = d * tan_ha;
+
+    const T1 = { x: B.x + dxBA * d, y: B.y + dyBA * d };
+    const T2 = { x: B.x + dxBC * d, y: B.y + dyBC * d };
+
+    const bisX = dxBA + dxBC, bisY = dyBA + dyBC;
+    const bisLen = Math.sqrt(bisX * bisX + bisY * bisY);
+    if (bisLen < 0.001) { out.push(B); continue; }
+    const dist = actualR / Math.sin(halfAngle);
+    const cx = B.x + (bisX / bisLen) * dist;
+    const cy = B.y + (bisY / bisLen) * dist;
+
+    const a1 = Math.atan2(T1.y - cy, T1.x - cx);
+    const a2 = Math.atan2(T2.y - cy, T2.x - cx);
+
+    let sweep = a2 - a1;
+    while (sweep > Math.PI)  sweep -= TAU;
+    while (sweep < -Math.PI) sweep += TAU;
+
+    for (let j = 0; j <= ARC_SEGS; j++) {
+      const a = a1 + sweep * j / ARC_SEGS;
+      out.push({ x: cx + actualR * Math.cos(a), y: cy + actualR * Math.sin(a) });
+    }
+  }
+  return out;
+}
+
+// ============================================================
+//  Drawing helpers
+// ============================================================
+
+function tracePath(pts) {
+  ctx.beginPath();
+  pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  ctx.closePath();
+}
+
+// Color schemes (for the 3-colouring)
+const SCHEMES = [
+  { name: 'Neon',  colors: ['#e94560', '#2a9d8f', '#f4a261'] },
+  { name: 'Ocean', colors: ['#1d3557', '#457b9d', '#a8dadc'] },
+  { name: 'Earth', colors: ['#606c38', '#bc6c25', '#dda15e'] },
+  { name: 'Berry', colors: ['#7b2d8e', '#d63384', '#ffb3c6'] },
+  { name: 'Slate', colors: ['#495057', '#6c757d', '#adb5bd'] },
+];
+const BASE = [...SCHEMES[0].colors];
+
+function setScheme(idx) {
+  const c = SCHEMES[Math.max(0, Math.min(idx, SCHEMES.length - 1))].colors;
+  BASE[0] = c[0]; BASE[1] = c[1]; BASE[2] = c[2];
+}
+
+// ============================================================
+//  Interlock gauge — physics-based model
+//
+//  Three factors combine into the interlock score:
+//
+//  1. EFFECTIVE TAB DEPTH  (d_eff)
+//     Raw depth = r * sin|θ|  (perpendicular jog displacement).
+//     Edge rounding at the jog peak (Q point) shaves this down.
+//     The jog-peak corner angle is  α = 90° − |θ|/2.
+//     Inscribing a round of radius ρ pulls the peak back by
+//       Δd = ρ × (1/sin(α/2) − 1)
+//
+//  2. SELF-LOCKING  (friction on the jog face)
+//     The jog-face normal is at |θ|/2 from the edge direction.
+//     A sliding tile must overcome friction to ride up the face:
+//       self-locking ⟺  tan(|θ|/2) ≤ μ
+//     For wood-on-wood μ ≈ 0.25–0.5.  Beyond the lock angle
+//     the face becomes a ramp the tile can climb, and the
+//     advantage drops as μ / tan(|θ|/2).
+//
+//  3. JOG CONTACT LENGTH  (friction surface)
+//     Face chord = 2r sin(|θ|/2).  Vertex rounding shortens
+//     the Q→V segment (V is a 60° point, so ρ_vtx eats 1.73×
+//     its value off each radial arm), reducing usable contact.
+// ============================================================
+
+function updateGauge(p) {
+  const s        = p.size;
+  const r        = p.radius * s;
+  const absDeg   = Math.abs(p.angle);
+  const absRad   = deg(absDeg);
+  const rhoEdge  = p.roundEdge * s;
+  const rhoVtx   = p.roundVtx  * s;
+  const MU       = 0.35;                // wood-on-wood, moderate
+  const thick    = p.thickness;          // mm (physical)
+  const exportMm = p.exportSize;         // mm — user's desired export side
+  const scaleMm  = exportMm / s;         // px → mm at export side
+
+  // ---- 1. Effective tab depth (in mm at export scale) ----
+  const rawDepth = r * Math.sin(absRad);
+
+  // Jog-peak corner angle α = π/2 − |θ|/2
+  const alpha     = Math.PI / 2 - absRad / 2;
+  const sinHalfA  = Math.sin(Math.max(alpha / 2, 0.05));   // guard div/0
+  const edgeRoundLoss = rhoEdge * (1 / sinHalfA - 1);
+
+  const effectiveDepth   = Math.max(0, rawDepth - edgeRoundLoss);
+  const effectiveDepthMm = effectiveDepth * scaleMm;
+
+  // Tab depth matters relative to material thickness, not side length.
+  // Even a tab a fraction of the thickness deep creates strong resistance —
+  // you must deform or lift the tile to clear it.
+  // A tab equal to the thickness is fully mechanically blocking.
+  // Use a saturating curve: quick ramp to useful grip, full at depth ≥ thickness.
+  const depthRatio = effectiveDepthMm / Math.max(thick, 0.01);
+  const depthNorm  = Math.min(1, 1 - Math.exp(-3 * depthRatio));
+
+  // ---- 2. Self-locking factor ----
+  // Face normal angle from edge direction = |θ|/2.
+  // Below friction angle: tab face grips — tile can't slide free.
+  // Above: force needed grows with angle, but there's still mechanical
+  // interference (the tab is a physical wall, not just friction).
+  // Model: self-lock contributes friction holding; even without it,
+  // the tab blocks lateral motion as long as depth > 0.
+  const tanHalf  = Math.tan(absRad / 2);
+  const lockAngleRad = Math.atan(MU);
+  // Friction bonus: 1.0 when self-locking, tapering above friction angle
+  // but never below 0.3 — mechanical interference still resists motion.
+  const frictionBonus = absRad < 0.01 ? 0
+    : tanHalf <= MU ? 1.0
+    : Math.max(0.3, MU / tanHalf);
+
+  // ---- 3. Contact-length factor ----
+  // Jog face chord length (in mm at export scale)
+  const jogChord   = 2 * r * Math.sin(absRad / 2);
+  const jogChordMm = jogChord * scaleMm;
+  // Vertex rounding shortens the Q→V arm by ρ_vtx / tan(30°) ≈ 1.73 ρ
+  const vtxEat  = rhoVtx / Math.tan(Math.PI / 6);  // ρ√3
+  // Effective radial arm remaining (Q→V has length r)
+  const armLeft = Math.max(0, r - vtxEat);
+  const armFrac = r > 0.001 ? armLeft / r : 0;
+  // Contact area = jogChord × thickness. Normalise against a reference
+  // area that represents "good mechanical engagement": 2mm face × 1.5mm.
+  const contactArea    = jogChordMm * thick * armFrac;
+  const refArea        = 2.0 * 1.5;  // mm² — modest engagement baseline
+  const contactFactor  = Math.min(1, contactArea / refArea);
+
+  // ---- Composite score (0 – 1) ----
+  // depthNorm gates everything (no tab = no interlock).
+  // frictionBonus and contactFactor modulate how strong the interlock is.
+  const rawScore = depthNorm * (0.5 + 0.3 * frictionBonus + 0.2 * contactFactor);
+  const pct      = Math.min(1, Math.max(0, rawScore));
+
+  // ---- Update DOM ----
+  document.getElementById('gauge-pip').style.left = (pct * 100) + '%';
+
+  const labels = [
+    [0.00, 'Free-sliding', '#888'],
+    [0.03, 'Loose',        '#2a9d8f'],
+    [0.12, 'Gentle',       '#4aad7f'],
+    [0.22, 'Snug',         '#8ab840'],
+    [0.35, 'Firm',         '#c8a030'],
+    [0.50, 'Stiff',        '#e08030'],
+    [0.70, 'Tight',        '#e06040'],
+    [0.85, 'Locked',       '#d03050'],
+    [0.95, 'Seized',       '#a00030'],
+  ];
+  let label = labels[0][1], color = labels[0][2];
+  for (const [thresh, l, c] of labels) {
+    if (pct >= thresh) { label = l; color = c; }
+  }
+
+  const readout = document.getElementById('gauge-readout');
+  readout.textContent = label;
+  readout.style.color = color;
+
+  // Detail line — physical dims at 50 mm export side
+  const mmDepth   = effectiveDepthMm.toFixed(2);
+  const mmFace    = jogChordMm.toFixed(1);
+  const lockAngleDeg = (lockAngleRad * 180 / Math.PI).toFixed(0);
+  const lockStr   = tanHalf <= MU ? 'self-locking' : 'slides (past ' + lockAngleDeg + '\u00B0)';
+  document.getElementById('gauge-detail').textContent =
+    `tab ${mmDepth}mm | face ${mmFace}mm \u00D7 ${thick.toFixed(1)}mm | ${lockStr}  (\u00B5=${MU}, ${exportMm}mm side)`;
+}
+
+// ============================================================
+//  Main draw
+// ============================================================
+
+function getP() {
+  return {
+    angle:   +document.getElementById('angle').value,
+    radius:  +document.getElementById('radius').value,
+    size:    +document.getElementById('size').value,
+    gridR:   +document.getElementById('grid').value,
+    explode: +document.getElementById('explode').value / 100,
+    roundEdge: +document.getElementById('round-edge').value,
+    roundVtx:  +document.getElementById('round-vtx').value,
+    thickness: +document.getElementById('thickness').value,
+    angular:     document.getElementById('angular').checked,
+    showOrig:    document.getElementById('show-original').checked,
+    showCirc:    document.getElementById('show-circles').checked,
+    showSingle:  document.getElementById('show-single').checked,
+    showJunction:document.getElementById('show-junction').checked,
+    scheme:    +document.getElementById('scheme').value,
+    exportSize:+document.getElementById('export-size').value,
+  };
+}
+
+function draw() {
+  const p = getP();
+  updateGauge(p);
+  ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+  const ox = cvs.width / 2;
+  const oy = cvs.height / 2;
+  const s = p.size;
+  const r = p.radius * s;
+  const cells = hexGrid(p.gridR);
+
+  // ---- Grid of tiles ----
+  cells.forEach(cell => {
+    const { x: px, y: py } = hex2px(cell.q, cell.r, s);
+    const cx = ox + px * (1 + p.explode);
+    const cy = oy + py * (1 + p.explode);
+
+    let outline = tileOutline(cx, cy, s, r, p.angle, p.angular);
+    if (p.roundEdge > 0 || p.roundVtx > 0) outline = roundCorners(outline, p.roundEdge * s, p.roundVtx * s);
+    const ci = hexColor3(cell.q, cell.r);
+
+    // Fill
+    tracePath(outline);
+    ctx.fillStyle = BASE[ci];
+    ctx.globalAlpha = 0.75;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Stroke
+    tracePath(outline);
+    ctx.strokeStyle = '#0a0a1a';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // Optional: original hex outline
+    if (p.showOrig) {
+      tracePath(hexVerts(cx, cy, s));
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 0.8;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Optional: twist circles at vertices
+    if (p.showCirc) {
+      hexVerts(cx, cy, s).forEach(v => {
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, r, 0, TAU);
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+      });
+    }
+  });
+
+  // ---- Inset: isolated single tile ----
+  if (p.showSingle) drawSingleTile(p);
+
+  // ---- Inset: 3-tile junction detail ----
+  if (p.showJunction) drawJunction(p);
+}
+
+// ============================================================
+//  Single tile inset (top-right corner)
+// ============================================================
+
+function drawSingleTile(p) {
+  const s = Math.min(p.size * 1.4, 80);
+  const r = p.radius * s;
+  const pad = 18;
+  const bw = s * 2.3 + pad * 2;
+  const bh = s * 2.3 + pad * 2;
+  const bx = cvs.width - bw - 12;
+  const by = 12;
+  const cx = bx + bw / 2;
+  const cy = by + bh / 2 + 10;
+
+  // Background box
+  ctx.fillStyle = 'rgba(10,10,26,0.85)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.rect(bx, by, bw, bh);
+  ctx.fill(); ctx.stroke();
+
+  // Label
+  ctx.fillStyle = '#666';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Single Tile', cx, by + 14);
+
+  // Dashed original hex
+  tracePath(hexVerts(cx, cy, s));
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 0.7;
+  ctx.setLineDash([3, 3]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Twist circles
+  hexVerts(cx, cy, s).forEach(v => {
+    ctx.beginPath();
+    ctx.arc(v.x, v.y, r, 0, TAU);
+    ctx.strokeStyle = 'rgba(233,69,96,0.25)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
+
+  // Modified outline
+  let outline = tileOutline(cx, cy, s, r, p.angle, p.angular);
+  if (p.roundEdge > 0 || p.roundVtx > 0) outline = roundCorners(outline, p.roundEdge * s, p.roundVtx * s);
+  tracePath(outline);
+  ctx.fillStyle = 'rgba(233,69,96,0.2)';
+  ctx.fill();
+  tracePath(outline);
+  ctx.strokeStyle = '#e94560';
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  // Dot the tab / notch jogs for clarity
+  if (Math.abs(p.angle) > 0.5) {
+    const theta = deg(p.angle);
+    const verts = hexVerts(cx, cy, s);
+    for (let i = 0; i < 6; i++) {
+      const V = verts[i];
+      const Vp = verts[(i + 5) % 6];
+      const Vn = verts[(i + 1) % 6];
+      const ap = Math.atan2(Vp.y - V.y, Vp.x - V.x);
+      const an = Math.atan2(Vn.y - V.y, Vn.x - V.x);
+
+      // Tab dot (green)
+      const t1 = ap + theta / 2;
+      ctx.beginPath();
+      ctx.arc(V.x + r * Math.cos(t1), V.y + r * Math.sin(t1), 2.5, 0, TAU);
+      ctx.fillStyle = '#2a9d8f';
+      ctx.fill();
+
+      // Notch dot (orange)
+      const t2 = an + theta / 2;
+      ctx.beginPath();
+      ctx.arc(V.x + r * Math.cos(t2), V.y + r * Math.sin(t2), 2.5, 0, TAU);
+      ctx.fillStyle = '#f4a261';
+      ctx.fill();
+    }
+    // Legend
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#2a9d8f';
+    ctx.fillText('\u25CF tab', bx + 10, by + bh - 22);
+    ctx.fillStyle = '#f4a261';
+    ctx.fillText('\u25CF notch', bx + 10, by + bh - 10);
+  }
+}
+
+// ============================================================
+//  3-tile junction inset (bottom-right corner)
+// ============================================================
+
+function drawJunction(p) {
+  const s = Math.min(p.size * 2.47, 143);
+  const r = p.radius * s;
+  const pad = 18;
+  const bw = s * 3 + pad * 2;
+  const bh = s * 2.8 + pad * 2;
+  const bx = cvs.width - bw - 12;
+  const by = cvs.height - bh - 12;
+  const cx = bx + bw / 2;
+  const cy = by + bh / 2;
+
+  // Background box
+  ctx.fillStyle = 'rgba(10,10,26,0.85)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.rect(bx, by, bw, bh);
+  ctx.fill(); ctx.stroke();
+
+  // Label
+  ctx.fillStyle = '#666';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('3-Tile Junction', cx, by + 14);
+
+  // The three tiles meeting at a vertex:
+  // Use the right-most vertex (angle 0) of the center hex.
+  // The three hexes sharing that vertex are:
+  //   (0,0), (1,0), (1,-1)  in axial coords
+  const trio = [
+    { q: 0, r: 0,  ci: 0 },
+    { q: 1, r: 0,  ci: 1 },
+    { q: 1, r: -1, ci: 2 },
+  ];
+
+  // Shared vertex is vertex 0 of the (0,0) hex in pixel space
+  const hex0center = hex2px(0, 0, s);
+  const sharedVtxPx = { x: hex0center.x + s, y: hex0center.y };
+  // Offset to place the shared vertex exactly at the center of the inset box
+  const offX = cx - sharedVtxPx.x;
+  const offY = cy - sharedVtxPx.y;
+
+  // Clip to the box
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(bx, by + 20, bw, bh - 20);
+  ctx.clip();
+
+  trio.forEach(t => {
+    const { x: px, y: py } = hex2px(t.q, t.r, s);
+    const hcx = offX + px;
+    const hcy = offY + py;
+    let outline = tileOutline(hcx, hcy, s, r, p.angle, p.angular);
+    if (p.roundEdge > 0 || p.roundVtx > 0) outline = roundCorners(outline, p.roundEdge * s, p.roundVtx * s);
+
+    tracePath(outline);
+    ctx.fillStyle = BASE[t.ci];
+    ctx.globalAlpha = 0.7;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    tracePath(outline);
+    ctx.strokeStyle = '#0a0a1a';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+
+    // Dashed original hex
+    tracePath(hexVerts(hcx, hcy, s));
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 0.6;
+    ctx.setLineDash([2, 2]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Draw twist circle at the shared vertex (now centered in box)
+  const svx = cx;
+  const svy = cy;
+  ctx.beginPath();
+  ctx.arc(svx, svy, r, 0, TAU);
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 2]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Show original vs rotated edge directions at the shared vertex
+  if (Math.abs(p.angle) > 0.5) {
+    const theta = deg(p.angle);
+    // The three edges meeting at this vertex go outward at 0°, 120°, 240°
+    const edgeAngles = [0, TAU / 3, 2 * TAU / 3];
+    edgeAngles.forEach(ea => {
+      // Original edge (dim)
+      ctx.beginPath();
+      ctx.moveTo(svx, svy);
+      ctx.lineTo(svx + r * 1.15 * Math.cos(ea), svy + r * 1.15 * Math.sin(ea));
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.stroke();
+      // Rotated edge (bright)
+      ctx.beginPath();
+      ctx.moveTo(svx, svy);
+      ctx.lineTo(svx + r * Math.cos(ea + theta), svy + r * Math.sin(ea + theta));
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([]);
+      ctx.stroke();
+    });
+  }
+
+  ctx.restore();
+}
+
+// ============================================================
+//  SVG export
+// ============================================================
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  const p = getP();
+  const s = p.exportSize;                // mm side length from input
+  const r = p.radius * s;
+  let pts = tileOutline(0, 0, s, r, p.angle, p.angular);
+  if (p.roundEdge > 0 || p.roundVtx > 0) pts = roundCorners(pts, p.roundEdge * s, p.roundVtx * s);
+
+  // Flip Y so SVG matches standard orientation
+  const fp = pts.map(pt => ({ x: pt.x, y: -pt.y }));
+
+  const xs = fp.map(pt => pt.x);
+  const ys = fp.map(pt => pt.y);
+  const mx = Math.min(...xs) - 1, my = Math.min(...ys) - 1;
+  const Mx = Math.max(...xs) + 1, My = Math.max(...ys) + 1;
+
+  const d = fp.map((pt, i) =>
+    (i === 0 ? 'M' : 'L') + pt.x.toFixed(4) + ' ' + pt.y.toFixed(4)
+  ).join(' ') + ' Z';
+
+  const svg =
+`<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="${mx} ${my} ${Mx - mx} ${My - my}"
+     width="${(Mx - mx).toFixed(2)}mm" height="${(My - my).toFixed(2)}mm">
+  <path d="${d}" fill="none" stroke="black" stroke-width="0.1"/>
+</svg>`;
+
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `hex-twist-${p.angle}deg-r${(p.radius * 100).toFixed(0)}.svg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ============================================================
+//  URL state persistence
+// ============================================================
+
+const CHECKBOXES = ['angular', 'show-original', 'show-circles', 'show-single', 'show-junction'];
+
+function saveToUrl() {
+  const params = new URLSearchParams();
+  sliders.forEach(s => params.set(s.id, document.getElementById(s.id).value));
+  CHECKBOXES.forEach(id => params.set(id, document.getElementById(id).checked ? '1' : '0'));
+  params.set('scheme', document.getElementById('scheme').value);
+  params.set('export-size', document.getElementById('export-size').value);
+  history.replaceState(null, '', '#' + params.toString());
+}
+
+function loadFromUrl() {
+  const hash = location.hash.slice(1);
+  if (!hash) return;
+  const params = new URLSearchParams(hash);
+  sliders.forEach(s => {
+    if (params.has(s.id)) {
+      const el = document.getElementById(s.id);
+      el.value = params.get(s.id);
+      document.getElementById(s.vid).innerHTML = s.fmt(+el.value);
+    }
+  });
+  CHECKBOXES.forEach(id => {
+    if (params.has(id)) document.getElementById(id).checked = params.get(id) === '1';
+  });
+  if (params.has('scheme')) {
+    const idx = +params.get('scheme');
+    document.getElementById('scheme').value = idx;
+    setScheme(idx);
+  }
+  if (params.has('export-size')) {
+    document.getElementById('export-size').value = params.get('export-size');
+  }
+}
+
+// ============================================================
+//  Controls wiring
+// ============================================================
+
+const sliders = [
+  { id: 'angle',   vid: 'v-angle',   fmt: v => v.toFixed(1) + '\u00B0' },
+  { id: 'radius',  vid: 'v-radius',  fmt: v => v.toFixed(2) + ' \u00D7 side' },
+  { id: 'round-edge', vid: 'v-round-edge', fmt: v => (+v).toFixed(3) + ' \u00D7 side' },
+  { id: 'round-vtx',  vid: 'v-round-vtx',  fmt: v => (+v).toFixed(3) + ' \u00D7 side' },
+  { id: 'thickness', vid: 'v-thickness', fmt: v => (+v).toFixed(1) + ' mm' },
+  { id: 'size',    vid: 'v-size',    fmt: v => v + ' px' },
+  { id: 'grid',    vid: 'v-grid',    fmt: v => v },
+  { id: 'explode', vid: 'v-explode', fmt: v => v + '%' },
+];
+
+function onInput() { draw(); saveToUrl(); }
+
+sliders.forEach(s => {
+  const el = document.getElementById(s.id);
+  el.addEventListener('input', () => {
+    document.getElementById(s.vid).innerHTML = s.fmt(+el.value);
+    onInput();
+  });
+});
+document.querySelectorAll('input[type=checkbox]').forEach(cb =>
+  cb.addEventListener('change', onInput)
+);
+document.getElementById('scheme').addEventListener('change', () => {
+  setScheme(+document.getElementById('scheme').value);
+  onInput();
+});
+document.getElementById('export-size').addEventListener('input', onInput);
+
+// ============================================================
+//  Canvas sizing & kick-off
+// ============================================================
+
+function resize() {
+  const main = document.getElementById('main');
+  // Zero canvas so its old intrinsic size doesn't inflate the container
+  cvs.width = 1;
+  cvs.height = 1;
+  cvs.width  = Math.max(100, main.clientWidth  - 40);
+  cvs.height = Math.max(100, main.clientHeight - 40);
+  draw();
+}
+loadFromUrl();
+window.addEventListener('resize', resize);
+resize();
+</script>
+</body>
+</html>
