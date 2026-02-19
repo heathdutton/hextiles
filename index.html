@@ -824,9 +824,7 @@ function draw() {
   closeRegions = [];
   const p = getP();
   const tilt = +document.getElementById('tilt').value;
-  const main = document.getElementById('main');
-  main.style.perspective = tilt > 0 ? '800px' : '';
-  cvs.style.transform = tilt > 0 ? `rotateX(${tilt}deg)` : '';
+  const tiltRad = tilt * Math.PI / 180;
   const showStats = document.getElementById('show-stats').checked;
   document.getElementById('stats-overlay').style.display = showStats ? '' : 'none';
   updateGauge(p);
@@ -838,8 +836,16 @@ function draw() {
   const r = p.radius * s;
   const cells = hexGrid(p.gridR);
 
+  // ---- Apply tilt to grid only ----
+  if (tilt > 0) {
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.scale(1, Math.cos(tiltRad));
+    ctx.translate(-ox, -oy);
+  }
+
   // ---- Grid of tiles ----
-  cells.forEach(cell => {
+  for (const cell of cells) {
     const { x: px, y: py } = hex2px(cell.q, cell.r, s);
     const cx = ox + px * (1 + p.explode);
     const cy = oy + py * (1 + p.explode);
@@ -881,7 +887,9 @@ function draw() {
         ctx.stroke();
       });
     }
-  });
+  }
+
+  if (tilt > 0) ctx.restore();
 
   // ---- Inset: isolated single tile ----
   if (p.showSingle) drawSingleTile(p);
