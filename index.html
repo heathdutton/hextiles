@@ -18,7 +18,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #1a1a2e;
+    background: #0d0221;
     color: #eee;
     display: flex;
     height: 100vh;
@@ -27,10 +27,10 @@
   #sidebar {
     width: 300px;
     padding: 24px;
-    background: #16213e;
+    background: #1a0533;
     overflow-y: auto;
     flex-shrink: 0;
-    border-right: 1px solid #2a2a4e;
+    border-right: 1px solid #3a1568;
   }
   #main {
     flex: 1;
@@ -45,39 +45,39 @@
   }
   canvas {
     display: block;
-    background: #0f3460;
+    background: #120630;
     border-radius: 12px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
   }
-  h1 { font-size: 20px; margin-bottom: 4px; color: #e94560; }
-  .subtitle { font-size: 12px; color: #777; margin-bottom: 20px; }
-  .section { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #555; margin: 20px 0 10px; border-top: 1px solid #2a2a4e; padding-top: 14px; }
+  h1 { font-size: 20px; margin-bottom: 4px; color: #ff6ec7; }
+  .subtitle { font-size: 12px; color: #8866aa; margin-bottom: 20px; }
+  .section { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #6a4c93; margin: 20px 0 10px; border-top: 1px solid #3a1568; padding-top: 14px; }
   .group { margin-bottom: 14px; }
-  .group label { display: block; font-size: 13px; margin-bottom: 4px; color: #bbb; }
-  .group label span { float: right; color: #e94560; font-weight: bold; }
-  input[type=range] { width: 100%; accent-color: #e94560; }
+  .group label { display: block; font-size: 13px; margin-bottom: 4px; color: #c0a0d8; }
+  .group label span { float: right; color: #ff6ec7; font-weight: bold; }
+  input[type=range] { width: 100%; accent-color: #ff6ec7; }
   .cb { margin-bottom: 10px; }
-  .cb label { font-size: 13px; color: #bbb; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-  .cb input { accent-color: #e94560; }
+  .cb label { font-size: 13px; color: #c0a0d8; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .cb input { accent-color: #ff6ec7; }
   #export-btn {
-    width: 100%; padding: 10px; background: #e94560; color: white;
-    border: none; border-radius: 6px; cursor: pointer; font-size: 13px; margin-top: 8px;
+    width: 100%; padding: 10px; background: #ff6ec7; color: #0d0221;
+    border: none; border-radius: 6px; cursor: pointer; font-size: 13px; margin-top: 8px; font-weight: 600;
   }
-  #export-btn:hover { background: #c73650; }
+  #export-btn:hover { background: #e050a8; }
   #export-grid-btn {
-    width: 100%; padding: 8px; background: transparent; color: #e94560;
-    border: 1px solid #e94560; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 6px;
+    width: 100%; padding: 8px; background: transparent; color: #ff6ec7;
+    border: 1px solid #ff6ec7; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 6px;
   }
-  #export-grid-btn:hover { background: rgba(233,69,96,0.1); }
-  .info { font-size: 11px; color: #555; margin-top: 16px; line-height: 1.6; }
+  #export-grid-btn:hover { background: rgba(255,110,199,0.1); }
+  .info { font-size: 11px; color: #6a4c93; margin-top: 16px; line-height: 1.6; }
   .examples { margin-top: 12px; font-size: 12px; }
-  .examples summary { cursor: pointer; color: #aaa; font-weight: 600; }
-  .examples a { display: block; color: #7ba4cc; text-decoration: none; padding: 3px 0; }
-  .examples a:hover { color: #e94560; }
+  .examples summary { cursor: pointer; color: #aa88cc; font-weight: 600; }
+  .examples a { display: block; color: #72c4ff; text-decoration: none; padding: 3px 0; }
+  .examples a:hover { color: #ff6ec7; }
 
   /* Interlock gauge */
   .gauge { margin: 16px 0 6px; }
-  .gauge-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #555; margin-bottom: 8px; border-top: 1px solid #2a2a4e; padding-top: 14px; }
+  .gauge-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #6a4c93; margin-bottom: 8px; border-top: 1px solid #3a1568; padding-top: 14px; }
   .gauge-track {
     height: 10px; border-radius: 5px; position: relative;
     background: linear-gradient(to right, #4a7fb5, #2a9d8f 25%, #8ab840 45%, #f4a261 65%, #e94560 85%, #a00030);
@@ -102,7 +102,7 @@
     text-align: center; font-size: 10px; color: #666; margin-top: 2px;
   }
   select, input[type=number] {
-    background: #1a1a2e; color: #eee; border: 1px solid #2a2a4e;
+    background: #0d0221; color: #eee; border: 1px solid #3a1568;
     border-radius: 4px; padding: 3px 6px; font-size: 12px;
   }
   select { cursor: pointer; }
@@ -113,8 +113,8 @@
   /* Stats overlay */
   #stats-overlay {
     position: absolute; bottom: 32px; left: 32px;
-    background: #0a0a1a;
-    border: 1px solid rgba(255,255,255,0.08);
+    background: #0d0221;
+    border: 1px solid #3a1568;
     border-radius: 10px;
     padding: 14px 18px;
     min-width: 260px;
@@ -191,11 +191,12 @@
   <div class="group" style="margin-top: 10px;">
     <label>Color Scheme
       <select id="scheme" style="float: right;">
-        <option value="0">Neon</option>
-        <option value="1">Ocean</option>
-        <option value="2">Earth</option>
-        <option value="3">Berry</option>
-        <option value="4">Slate</option>
+        <option value="0">Synthwave</option>
+        <option value="1">Neon</option>
+        <option value="2">Ocean</option>
+        <option value="3">Earth</option>
+        <option value="4">Berry</option>
+        <option value="5">Slate</option>
       </select>
     </label>
   </div>
@@ -211,7 +212,7 @@
     <a href="#angle=20&radius=0.35&round-edge=0.03&round-vtx=0.01&thickness=3&export-size=40&size=85&grid=2&explode=0&angular=0&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Tight puzzle (arc, 40mm)</a>
     <a href="#angle=12&radius=0.3&round-edge=0&round-vtx=0&thickness=1.5&export-size=15&size=85&grid=2&explode=0&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Wargame counter (15mm)</a>
     <a href="#angle=10&radius=0.2&round-edge=0.015&round-vtx=0&thickness=5&export-size=58&size=85&grid=2&explode=0&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Large format (58mm, 5mm stock)</a>
-    <a href="#angle=30&radius=0.4&round-edge=0.04&round-vtx=0.02&thickness=3&export-size=50&size=85&grid=2&explode=15&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=1">Decorative (high twist, exploded)</a>
+    <a href="#angle=30&radius=0.4&round-edge=0.04&round-vtx=0.02&thickness=3&export-size=50&size=85&grid=2&explode=15&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=2">Decorative (high twist, exploded)</a>
   </details>
 
   <div class="info">
@@ -506,6 +507,7 @@ function tracePath(pts) {
 
 // Color schemes (for the 3-colouring)
 const SCHEMES = [
+  { name: 'Synthwave', colors: ['#ff6ec7', '#00d4ff', '#f8b500'] },
   { name: 'Neon',  colors: ['#e94560', '#2a9d8f', '#f4a261'] },
   { name: 'Ocean', colors: ['#1d3557', '#457b9d', '#a8dadc'] },
   { name: 'Earth', colors: ['#606c38', '#bc6c25', '#dda15e'] },
@@ -799,7 +801,7 @@ function draw() {
 
     // Stroke
     tracePath(outline);
-    ctx.strokeStyle = '#0a0a1a';
+    ctx.strokeStyle = '#0d0221';
     ctx.lineWidth = 1.4;
     ctx.stroke();
 
@@ -847,8 +849,8 @@ function drawSingleTile(p) {
   const cy = by + bh / 2 + 10;
 
   // Background box (opaque, rounded)
-  ctx.fillStyle = '#0a0a1a';
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillStyle = '#0d0221';
+  ctx.strokeStyle = '#3a1568';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.roundRect(bx, by, bw, bh, 10);
@@ -939,8 +941,8 @@ function drawJunction(p) {
   const cy = by + bh / 2;
 
   // Background box (opaque, rounded)
-  ctx.fillStyle = '#0a0a1a';
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillStyle = '#0d0221';
+  ctx.strokeStyle = '#3a1568';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.roundRect(bx, by, bw, bh, 10);
@@ -990,7 +992,7 @@ function drawJunction(p) {
     ctx.globalAlpha = 1;
 
     tracePath(outline);
-    ctx.strokeStyle = '#0a0a1a';
+    ctx.strokeStyle = '#0d0221';
     ctx.lineWidth = 1.6;
     ctx.stroke();
 
