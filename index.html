@@ -15,10 +15,23 @@
 <meta name="twitter:description" content="Interactive hex tile designer with twist-lock joints for laser-cut board game tiles. Export SVG.">
 <link rel="canonical" href="https://heathdutton.github.io/hextile-designer/">
 <style>
+  :root {
+    --bg: #0d0221;
+    --sidebar: #1a0533;
+    --canvas: #120630;
+    --border: #3a1568;
+    --accent: #ff6ec7;
+    --accent-hover: #e050a8;
+    --label: #c0a0d8;
+    --muted: #6a4c93;
+    --link: #72c4ff;
+    --overlay-bg: #0d0221;
+    --tile-stroke: #0d0221;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #0d0221;
+    background: var(--bg);
     color: #eee;
     display: flex;
     height: 100vh;
@@ -27,10 +40,10 @@
   #sidebar {
     width: 300px;
     padding: 24px;
-    background: #1a0533;
+    background: var(--sidebar);
     overflow-y: auto;
     flex-shrink: 0;
-    border-right: 1px solid #3a1568;
+    border-right: 1px solid var(--border);
   }
   #main {
     flex: 1;
@@ -45,39 +58,39 @@
   }
   canvas {
     display: block;
-    background: #120630;
+    background: var(--canvas);
     border-radius: 12px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.5);
   }
-  h1 { font-size: 20px; margin-bottom: 4px; color: #ff6ec7; }
-  .subtitle { font-size: 12px; color: #8866aa; margin-bottom: 20px; }
-  .section { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #6a4c93; margin: 20px 0 10px; border-top: 1px solid #3a1568; padding-top: 14px; }
+  h1 { font-size: 20px; margin-bottom: 4px; color: var(--accent); }
+  .subtitle { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+  .section { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 20px 0 10px; border-top: 1px solid var(--border); padding-top: 14px; }
   .group { margin-bottom: 14px; }
-  .group label { display: block; font-size: 13px; margin-bottom: 4px; color: #c0a0d8; }
-  .group label span { float: right; color: #ff6ec7; font-weight: bold; }
-  input[type=range] { width: 100%; accent-color: #ff6ec7; }
+  .group label { display: block; font-size: 13px; margin-bottom: 4px; color: var(--label); }
+  .group label span { float: right; color: var(--accent); font-weight: bold; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
   .cb { margin-bottom: 10px; }
-  .cb label { font-size: 13px; color: #c0a0d8; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-  .cb input { accent-color: #ff6ec7; }
+  .cb label { font-size: 13px; color: var(--label); cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .cb input { accent-color: var(--accent); }
   #export-btn {
-    width: 100%; padding: 10px; background: #ff6ec7; color: #0d0221;
+    width: 100%; padding: 10px; background: var(--accent); color: var(--bg);
     border: none; border-radius: 6px; cursor: pointer; font-size: 13px; margin-top: 8px; font-weight: 600;
   }
-  #export-btn:hover { background: #e050a8; }
+  #export-btn:hover { background: var(--accent-hover); }
   #export-grid-btn {
-    width: 100%; padding: 8px; background: transparent; color: #ff6ec7;
-    border: 1px solid #ff6ec7; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 6px;
+    width: 100%; padding: 8px; background: transparent; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 6px;
   }
-  #export-grid-btn:hover { background: rgba(255,110,199,0.1); }
-  .info { font-size: 11px; color: #6a4c93; margin-top: 16px; line-height: 1.6; }
+  #export-grid-btn:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .info { font-size: 11px; color: var(--muted); margin-top: 16px; line-height: 1.6; }
   .examples { margin-top: 12px; font-size: 12px; }
-  .examples summary { cursor: pointer; color: #aa88cc; font-weight: 600; }
-  .examples a { display: block; color: #72c4ff; text-decoration: none; padding: 3px 0; }
-  .examples a:hover { color: #ff6ec7; }
+  .examples summary { cursor: pointer; color: var(--label); font-weight: 600; }
+  .examples a { display: block; color: var(--link); text-decoration: none; padding: 3px 0; }
+  .examples a:hover { color: var(--accent); }
 
   /* Interlock gauge */
   .gauge { margin: 16px 0 6px; }
-  .gauge-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #6a4c93; margin-bottom: 8px; border-top: 1px solid #3a1568; padding-top: 14px; }
+  .gauge-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; border-top: 1px solid var(--border); padding-top: 14px; }
   .gauge-track {
     height: 10px; border-radius: 5px; position: relative;
     background: linear-gradient(to right, #4a7fb5, #2a9d8f 25%, #8ab840 45%, #f4a261 65%, #e94560 85%, #a00030);
@@ -102,19 +115,19 @@
     text-align: center; font-size: 10px; color: #666; margin-top: 2px;
   }
   select, input[type=number] {
-    background: #0d0221; color: #eee; border: 1px solid #3a1568;
+    background: var(--bg); color: #eee; border: 1px solid var(--border);
     border-radius: 4px; padding: 3px 6px; font-size: 12px;
   }
   select { cursor: pointer; }
   input[type=number] { width: 70px; }
   .export-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
-  .export-row label { font-size: 12px; color: #bbb; white-space: nowrap; }
+  .export-row label { font-size: 12px; color: var(--label); white-space: nowrap; }
 
   /* Stats overlay */
   #stats-overlay {
     position: absolute; bottom: 32px; left: 32px;
-    background: #0d0221;
-    border: 1px solid #3a1568;
+    background: var(--overlay-bg);
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 14px 18px;
     min-width: 260px;
@@ -126,7 +139,7 @@
     background: none; border: none; color: #555; font-size: 13px;
     cursor: pointer; padding: 2px 5px; line-height: 1;
   }
-  .overlay-close:hover { color: #e94560; }
+  .overlay-close:hover { color: var(--accent); }
   #stats-overlay .gauge { margin: 0 0 10px; }
   #stats-overlay .gauge:last-child { margin-bottom: 0; }
   #stats-overlay .gauge-label { border-top: none; padding-top: 0; margin-bottom: 6px; }
@@ -189,7 +202,7 @@
   <div class="cb"><label><input type="checkbox" id="show-junction" checked> Show 3-tile junction</label></div>
   <div class="cb"><label><input type="checkbox" id="show-stats" checked> Show stats</label></div>
   <div class="group" style="margin-top: 10px;">
-    <label>Color Scheme
+    <label>Theme
       <select id="scheme" style="float: right;">
         <option value="0">Synthwave</option>
         <option value="1">Neon</option>
@@ -222,7 +235,7 @@
     but resistant to sliding apart. The tiles still meet at each vertex point
     (no voids). Tab depth &asymp; r &times; sin(&theta;).
   </div>
-  <a href="https://github.com/heathdutton/hextile-designer" target="_blank" style="display:block; margin-top:16px; font-size:11px; color:#555; text-decoration:none;">github.com/heathdutton/hextile-designer</a>
+  <a href="https://github.com/heathdutton/hextile-designer" target="_blank" style="display:block; margin-top:16px; font-size:11px; color:var(--muted); text-decoration:none;">github.com/heathdutton/hextile-designer</a>
 </div>
 
 <div id="main">
@@ -271,6 +284,7 @@ function deg(d) { return d * Math.PI / 180; }
 
 const OVERLAY_BOX = 260;  // unified width & height for canvas overlays
 let closeRegions = [];     // {x, y, w, h, id} hit targets for overlay X buttons
+let hoveredClose = null;   // id of close button currently hovered
 
 function drawOverlayClose(bx, by, bw, checkboxId) {
   const hitW = 20, hitH = 20;
@@ -278,7 +292,7 @@ function drawOverlayClose(bx, by, bw, checkboxId) {
   const ry = by + 4;
   closeRegions.push({ x: rx, y: ry, w: hitW, h: hitH, id: checkboxId });
   ctx.font = '13px sans-serif';
-  ctx.fillStyle = '#555';
+  ctx.fillStyle = hoveredClose === checkboxId ? THEME.accent : '#555';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('\u00D7', rx + hitW / 2, ry + hitH / 2);
@@ -310,7 +324,10 @@ cvs.addEventListener('click', e => {
 
 cvs.addEventListener('mousemove', e => {
   const { x, y } = canvasMouseCoords(e);
-  cvs.style.cursor = hitCloseRegion(x, y) ? 'pointer' : '';
+  const hit = hitCloseRegion(x, y);
+  cvs.style.cursor = hit ? 'pointer' : '';
+  const newHover = hit ? hit.id : null;
+  if (newHover !== hoveredClose) { hoveredClose = newHover; draw(); }
 });
 
 // ============================================================
@@ -505,20 +522,52 @@ function tracePath(pts) {
   ctx.closePath();
 }
 
-// Color schemes (for the 3-colouring)
+// Themes: tile colors + full UI palette
 const SCHEMES = [
-  { name: 'Synthwave', colors: ['#ff6ec7', '#00d4ff', '#f8b500'] },
-  { name: 'Neon',  colors: ['#e94560', '#2a9d8f', '#f4a261'] },
-  { name: 'Ocean', colors: ['#1d3557', '#457b9d', '#a8dadc'] },
-  { name: 'Earth', colors: ['#606c38', '#bc6c25', '#dda15e'] },
-  { name: 'Berry', colors: ['#7b2d8e', '#d63384', '#ffb3c6'] },
-  { name: 'Slate', colors: ['#495057', '#6c757d', '#adb5bd'] },
+  { name: 'Synthwave', colors: ['#b537f2', '#41ead4', '#ff2975'],
+    bg:'#0d0221', sidebar:'#1a0533', canvas:'#120630', border:'#3a1568',
+    accent:'#ff6ec7', accentHover:'#e050a8', label:'#c0a0d8', muted:'#6a4c93',
+    link:'#72c4ff', overlay:'#0d0221', stroke:'#0d0221' },
+  { name: 'Neon', colors: ['#e94560', '#2a9d8f', '#f4a261'],
+    bg:'#1a1a2e', sidebar:'#16213e', canvas:'#0f3460', border:'#2a2a4e',
+    accent:'#e94560', accentHover:'#c73650', label:'#bbb', muted:'#555',
+    link:'#7ba4cc', overlay:'#1a1a2e', stroke:'#1a1a2e' },
+  { name: 'Ocean', colors: ['#1d3557', '#457b9d', '#a8dadc'],
+    bg:'#0b1929', sidebar:'#0f2132', canvas:'#132e45', border:'#1d3557',
+    accent:'#a8dadc', accentHover:'#8ac4c8', label:'#8ab4c4', muted:'#4a7080',
+    link:'#a8dadc', overlay:'#0b1929', stroke:'#0b1929' },
+  { name: 'Earth', colors: ['#606c38', '#bc6c25', '#dda15e'],
+    bg:'#1c1a14', sidebar:'#252218', canvas:'#2a2616', border:'#3d3828',
+    accent:'#dda15e', accentHover:'#c48a48', label:'#b8a888', muted:'#706848',
+    link:'#c8a868', overlay:'#1c1a14', stroke:'#1c1a14' },
+  { name: 'Berry', colors: ['#7b2d8e', '#d63384', '#ffb3c6'],
+    bg:'#1a0e1e', sidebar:'#241428', canvas:'#1e0a22', border:'#3a1845',
+    accent:'#d63384', accentHover:'#b82870', label:'#c8a0b8', muted:'#7a4868',
+    link:'#e888b8', overlay:'#1a0e1e', stroke:'#1a0e1e' },
+  { name: 'Slate', colors: ['#495057', '#6c757d', '#adb5bd'],
+    bg:'#1a1c1e', sidebar:'#212529', canvas:'#2b2e32', border:'#3a3e44',
+    accent:'#adb5bd', accentHover:'#8e959c', label:'#9a9ea4', muted:'#5a5e64',
+    link:'#8ca0b0', overlay:'#1a1c1e', stroke:'#1a1c1e' },
 ];
 const BASE = [...SCHEMES[0].colors];
+let THEME = SCHEMES[0];
 
 function setScheme(idx) {
-  const c = SCHEMES[Math.max(0, Math.min(idx, SCHEMES.length - 1))].colors;
-  BASE[0] = c[0]; BASE[1] = c[1]; BASE[2] = c[2];
+  const t = SCHEMES[Math.max(0, Math.min(idx, SCHEMES.length - 1))];
+  BASE[0] = t.colors[0]; BASE[1] = t.colors[1]; BASE[2] = t.colors[2];
+  THEME = t;
+  const r = document.documentElement.style;
+  r.setProperty('--bg', t.bg);
+  r.setProperty('--sidebar', t.sidebar);
+  r.setProperty('--canvas', t.canvas);
+  r.setProperty('--border', t.border);
+  r.setProperty('--accent', t.accent);
+  r.setProperty('--accent-hover', t.accentHover);
+  r.setProperty('--label', t.label);
+  r.setProperty('--muted', t.muted);
+  r.setProperty('--link', t.link);
+  r.setProperty('--overlay-bg', t.overlay);
+  r.setProperty('--tile-stroke', t.stroke);
 }
 
 // ============================================================
@@ -801,7 +850,7 @@ function draw() {
 
     // Stroke
     tracePath(outline);
-    ctx.strokeStyle = '#0d0221';
+    ctx.strokeStyle = THEME.stroke;
     ctx.lineWidth = 1.4;
     ctx.stroke();
 
@@ -849,8 +898,8 @@ function drawSingleTile(p) {
   const cy = by + bh / 2 + 10;
 
   // Background box (opaque, rounded)
-  ctx.fillStyle = '#0d0221';
-  ctx.strokeStyle = '#3a1568';
+  ctx.fillStyle = THEME.overlay;
+  ctx.strokeStyle = THEME.border;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.roundRect(bx, by, bw, bh, 10);
@@ -941,8 +990,8 @@ function drawJunction(p) {
   const cy = by + bh / 2;
 
   // Background box (opaque, rounded)
-  ctx.fillStyle = '#0d0221';
-  ctx.strokeStyle = '#3a1568';
+  ctx.fillStyle = THEME.overlay;
+  ctx.strokeStyle = THEME.border;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.roundRect(bx, by, bw, bh, 10);
@@ -992,7 +1041,7 @@ function drawJunction(p) {
     ctx.globalAlpha = 1;
 
     tracePath(outline);
-    ctx.strokeStyle = '#0d0221';
+    ctx.strokeStyle = THEME.stroke;
     ctx.lineWidth = 1.6;
     ctx.stroke();
 
@@ -1211,6 +1260,7 @@ function resize() {
   cvs.height = Math.max(100, main.clientHeight - 40);
   draw();
 }
+setScheme(0);
 loadFromUrl();
 window.addEventListener('resize', resize);
 window.addEventListener('hashchange', () => { loadFromUrl(); onInput(); });
