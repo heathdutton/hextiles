@@ -197,8 +197,8 @@
     <input type="range" id="tilt" min="0" max="60" step="1" value="0">
   </div>
   <div class="group" id="perspective-group" style="display:none">
-    <label>Perspective <span id="v-perspective">1%</span></label>
-    <input type="range" id="perspective" min="1" max="70" step="1" value="1">
+    <label>Perspective <span id="v-perspective">35%</span></label>
+    <input type="range" id="perspective" min="1" max="70" step="1" value="35">
   </div>
 
   <div class="section">Options</div>
@@ -226,13 +226,13 @@
 
   <details class="examples">
     <summary>Examples</summary>
-    <a href="#angle=32&radius=0.17&round-edge=0.03&round-vtx=0.03&thickness=2&export-size=30&size=85&grid=2&explode=0&tilt=0&perspective=1&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Default</a>
-    <a href="#angle=0&radius=0&round-edge=0&round-vtx=0&thickness=2&export-size=26&size=85&grid=2&explode=0&tilt=0&perspective=1&angular=1&show-original=0&show-circles=0&show-single=0&show-junction=0&show-stats=0&scheme=0">Catan (26mm, no interlock)</a>
-    <a href="#angle=6&radius=0.25&round-edge=0.02&round-vtx=0&thickness=3&export-size=26&size=85&grid=2&explode=0&tilt=0&perspective=1&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Catan-like (gentle, 26mm)</a>
-    <a href="#angle=20&radius=0.35&round-edge=0.03&round-vtx=0.01&thickness=3&export-size=40&size=85&grid=2&explode=0&tilt=0&perspective=1&angular=0&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Tight puzzle (arc, 40mm)</a>
-    <a href="#angle=12&radius=0.3&round-edge=0&round-vtx=0&thickness=1.5&export-size=15&size=85&grid=2&explode=0&tilt=0&perspective=1&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Wargame counter (15mm)</a>
-    <a href="#angle=10&radius=0.2&round-edge=0.015&round-vtx=0&thickness=5&export-size=58&size=85&grid=2&explode=0&tilt=0&perspective=1&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Large format (58mm, 5mm stock)</a>
-    <a href="#angle=30&radius=0.4&round-edge=0.04&round-vtx=0.02&thickness=3&export-size=50&size=85&grid=2&explode=15&tilt=0&perspective=1&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=3">Decorative (high twist, exploded)</a>
+    <a href="#angle=32&radius=0.17&round-edge=0.03&round-vtx=0.03&thickness=2&export-size=30&size=85&grid=2&explode=0&tilt=0&perspective=35&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Default</a>
+    <a href="#angle=0&radius=0&round-edge=0&round-vtx=0&thickness=2&export-size=26&size=85&grid=2&explode=0&tilt=0&perspective=35&angular=1&show-original=0&show-circles=0&show-single=0&show-junction=0&show-stats=0&scheme=0">Catan (26mm, no interlock)</a>
+    <a href="#angle=6&radius=0.25&round-edge=0.02&round-vtx=0&thickness=3&export-size=26&size=85&grid=2&explode=0&tilt=0&perspective=35&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Catan-like (gentle, 26mm)</a>
+    <a href="#angle=20&radius=0.35&round-edge=0.03&round-vtx=0.01&thickness=3&export-size=40&size=85&grid=2&explode=0&tilt=0&perspective=35&angular=0&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Tight puzzle (arc, 40mm)</a>
+    <a href="#angle=12&radius=0.3&round-edge=0&round-vtx=0&thickness=1.5&export-size=15&size=85&grid=2&explode=0&tilt=0&perspective=35&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Wargame counter (15mm)</a>
+    <a href="#angle=10&radius=0.2&round-edge=0.015&round-vtx=0&thickness=5&export-size=58&size=85&grid=2&explode=0&tilt=0&perspective=35&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=0">Large format (58mm, 5mm stock)</a>
+    <a href="#angle=30&radius=0.4&round-edge=0.04&round-vtx=0.02&thickness=3&export-size=50&size=85&grid=2&explode=15&tilt=0&perspective=35&angular=1&show-original=0&show-circles=0&show-single=1&show-junction=1&show-stats=1&scheme=3">Decorative (high twist, exploded)</a>
   </details>
 
   <div class="info">
@@ -883,22 +883,22 @@ function draw() {
   });
   if (tilt > 0) tileData.sort((a, b) => a.cy - b.cy);
 
-  // ---- Grid of tiles ----
-  for (const td of tileData) {
-    const top = td.outline.map(proj);
+  // Pre-project all tile outlines
+  for (const td of tileData) td.top = td.outline.map(proj);
 
-    // 3D side walls when tilted
-    if (tilt > 0 && extH > 0.5) {
+  // ---- Pass 1: side walls (below table surface) ----
+  if (tilt > 0 && extH > 0.5) {
+    for (const td of tileData) {
       const sideColor = darkenHex(THEME.colors[td.ci], 0.4);
       const edgeColor = darkenHex(THEME.colors[td.ci], 0.55);
-      for (let i = 0; i < top.length; i++) {
-        const j = (i + 1) % top.length;
+      for (let i = 0; i < td.top.length; i++) {
+        const j = (i + 1) % td.top.length;
         // Outward normal from original (un-projected) outline (CW winding)
         const o0 = td.outline[i], o1 = td.outline[j];
         const odx = o1.x - o0.x, ody = o1.y - o0.y;
         const outNy = -odx;
         if (outNy <= 0) continue; // skip back-facing edges
-        const t0 = top[i], t1 = top[j];
+        const t0 = td.top[i], t1 = td.top[j];
         const b0 = projBot(o0), b1 = projBot(o1);
         ctx.beginPath();
         ctx.moveTo(t0.x, t0.y);
@@ -917,15 +917,18 @@ function draw() {
         ctx.stroke();
       }
     }
+  }
 
+  // ---- Pass 2: top faces (table surface, always above side walls) ----
+  for (const td of tileData) {
     // Top face
-    tracePath(top);
+    tracePath(td.top);
     ctx.fillStyle = THEME.colors[td.ci];
     ctx.globalAlpha = 0.75;
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    tracePath(top);
+    tracePath(td.top);
     ctx.strokeStyle = THEME.stroke;
     ctx.lineWidth = 1.4;
     ctx.stroke();
