@@ -192,6 +192,10 @@
     <label>Explode <span id="v-explode">0%</span></label>
     <input type="range" id="explode" min="0" max="60" step="1" value="0">
   </div>
+  <div class="group">
+    <label>Tilt <span id="v-tilt">0°</span></label>
+    <input type="range" id="tilt" min="0" max="60" step="1" value="0">
+  </div>
 
   <div class="section">Options</div>
   <div class="cb"><label><input type="checkbox" id="angular" checked> Angular joints</label></div>
@@ -819,6 +823,10 @@ function getP() {
 function draw() {
   closeRegions = [];
   const p = getP();
+  const tilt = +document.getElementById('tilt').value;
+  const main = document.getElementById('main');
+  main.style.perspective = tilt > 0 ? '800px' : '';
+  cvs.style.transform = tilt > 0 ? `rotateX(${tilt}deg)` : '';
   const showStats = document.getElementById('show-stats').checked;
   document.getElementById('stats-overlay').style.display = showStats ? '' : 'none';
   updateGauge(p);
@@ -1228,6 +1236,7 @@ const sliders = [
   { id: 'size',    vid: 'v-size',    fmt: v => v },
   { id: 'grid',    vid: 'v-grid',    fmt: v => v },
   { id: 'explode', vid: 'v-explode', fmt: v => v + '%' },
+  { id: 'tilt',    vid: 'v-tilt',    fmt: v => v + '\u00B0' },
 ];
 
 function onInput() { draw(); saveToUrl(); }
