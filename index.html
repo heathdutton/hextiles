@@ -1060,23 +1060,68 @@ function getP() {
     roundEdge: +document.getElementById('round-edge').value,
     roundVtx:  +document.getElementById('round-vtx').value,
     thickness: +document.getElementById('thickness').value,
+    tilt:    +document.getElementById('tilt').value,
+    perspective: +document.getElementById('perspective').value,
     angular:     document.getElementById('joint-angular').checked,
     showOrig:    document.getElementById('show-original').checked,
     showCirc:    document.getElementById('show-circles').checked,
     showSingle:  document.getElementById('show-single').checked,
     showJunction:document.getElementById('show-junction').checked,
+    showStats:   document.getElementById('show-stats').checked,
     scheme:    +document.getElementById('scheme').value,
     exportSize:+document.getElementById('export-size').value,
   };
 }
 
-function draw() {
+// ---- Animated parameter interpolation ----
+// Numeric params lerp toward target over ~100ms (exponential ease-out).
+const ANIM_KEYS = ['angle','radius','size','explode','roundEdge','roundVtx',
+  'thickness','exportSize','tilt','perspective'];
+let animP = null;   // current animated state
+let animRaf = null;  // pending rAF id
+
+function lerpP(cur, tgt) {
+  const LERP = 0.28;  // per frame at 60fps → ~95% in 100ms
+  let moving = false;
+  for (const k of ANIM_KEYS) {
+    const d = tgt[k] - cur[k];
+    if (Math.abs(d) > 0.0001) {
+      cur[k] += d * LERP;
+      moving = true;
+    } else {
+      cur[k] = tgt[k];
+    }
+  }
+  // Discrete values snap instantly
+  cur.gridR = tgt.gridR;
+  cur.angular = tgt.angular;
+  cur.showOrig = tgt.showOrig;
+  cur.showCirc = tgt.showCirc;
+  cur.showSingle = tgt.showSingle;
+  cur.showJunction = tgt.showJunction;
+  cur.showStats = tgt.showStats;
+  cur.scheme = tgt.scheme;
+  return moving;
+}
+
+function animLoop() {
+  animRaf = null;
+  const tgt = getP();
+  if (!animP) animP = { ...tgt };
+  const moving = lerpP(animP, tgt);
+  drawWithP(animP);
+  if (moving) animRaf = requestAnimationFrame(animLoop);
+}
+
+function startAnim() {
+  if (!animRaf) animRaf = requestAnimationFrame(animLoop);
+}
+
+function drawWithP(p) {
   closeRegions = [];
-  const p = getP();
-  const tilt = +document.getElementById('tilt').value;
+  const tilt = p.tilt;
   const tiltRad = tilt * Math.PI / 180;
-  const showStats = document.getElementById('show-stats').checked;
-  document.getElementById('stats-overlay').style.display = showStats ? '' : 'none';
+  document.getElementById('stats-overlay').style.display = p.showStats ? '' : 'none';
   updateGauge(p);
   ctx.clearRect(0, 0, cvs.width, cvs.height);
 
@@ -1090,7 +1135,7 @@ function draw() {
   const sinTilt = Math.sin(tiltRad);
   const thickPx = p.thickness * sideLen / p.exportSize;
   const extH = thickPx * sinTilt;
-  const persp = +document.getElementById('perspective').value;
+  const persp = p.perspective;
   // 1% → ~5× canvas height (nearly flat), 70% → ~0.6× (strong perspective)
   const focalDist = cvs.height * (0.4 + 4.6 * Math.pow(1 - persp / 70, 2));
 
@@ -1599,7 +1644,8 @@ const sliders = [
   { id: 'perspective', vid: 'v-perspective', fmt: v => v + '%' },
 ];
 
-function onInput() { draw(); saveToUrl(); }
+function draw() { animP = null; animLoop(); }  // immediate (resize, init)
+function onInput() { saveToUrl(); startAnim(); }
 
 const perspGroup = document.getElementById('perspective-group');
 function syncPerspVisibility() {
