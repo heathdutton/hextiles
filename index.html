@@ -1508,6 +1508,12 @@ document.getElementById('randomize-btn').addEventListener('click', () => {
     el.value = val;
     document.getElementById(s.vid).textContent = s.fmt(+el.value);
   });
+  // Random shape, then clamp angle to new max
+  const sides = [3, 4, 6][Math.floor(Math.random() * 3)];
+  setShape(sides);
+  const angleEl = document.getElementById('angle');
+  if (+angleEl.value > SHAPE.maxTwist) angleEl.value = SHAPE.maxTwist;
+  document.getElementById('v-angle').textContent = (+angleEl.value).toFixed(1) + '\u00B0';
   // Coin-flip angular vs arc
   document.getElementById('angular').checked = Math.random() > 0.5;
   onInput();
