@@ -81,12 +81,12 @@
   }
   h1 { font-size: 20px; margin-bottom: 4px; color: var(--accent); }
   .subtitle { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
-  #randomize-btn {
+  .section button {
     font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border);
     border-radius: 4px; padding: 2px 8px; cursor: pointer; float: right;
-    transition: color 0.15s, border-color 0.15s;
+    transition: color 0.15s, border-color 0.15s; text-transform: none; letter-spacing: 0;
   }
-  #randomize-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .section button:hover { color: var(--accent); border-color: var(--accent); }
   .section { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 20px 0 10px; border-top: 1px solid var(--border); padding-top: 14px; }
   .group { margin-bottom: 14px; }
   .group > label { display: block; font-size: 13px; margin-bottom: 4px; color: var(--label); }
@@ -277,7 +277,7 @@
   <div class="gauge-detail" id="hex-dims"></div>
   </div>
 
-  <div class="section" data-section="display">Display Options</div>
+  <div class="section" data-section="display">Display Options <button id="randomize-display-btn">Randomize</button></div>
   <div class="section-body" data-section="display">
   <div class="group">
     <label>Theme
@@ -1650,6 +1650,34 @@ document.getElementById('randomize-btn').addEventListener('click', () => {
   document.getElementById('joint-circular').checked = !ang;
   onInput();
 });
+document.getElementById('randomize-display-btn').addEventListener('click', () => {
+  const rng = (min, max, step) => {
+    const steps = Math.round((max - min) / step);
+    return min + Math.round(Math.random() * steps) * step;
+  };
+  const displaySliders = [
+    { id: 'size',        vid: 'v-size',        min: 30, max: 150, step: 1, fmt: v => v },
+    { id: 'grid',        vid: 'v-grid',        min: 3,  max: 12,  step: 1, fmt: v => v },
+    { id: 'explode',     vid: 'v-explode',     min: 0,  max: 30,  step: 1, fmt: v => v + '%' },
+    { id: 'tilt',        vid: 'v-tilt',        min: 0,  max: 55,  step: 1, fmt: v => v + '\u00B0' },
+    { id: 'perspective', vid: 'v-perspective',  min: 10, max: 60,  step: 1, fmt: v => v + '%' },
+  ];
+  displaySliders.forEach(s => {
+    const val = rng(s.min, s.max, s.step);
+    document.getElementById(s.id).value = val;
+    document.getElementById(s.vid).textContent = s.fmt(val);
+  });
+  // Random theme
+  const schemeEl = document.getElementById('scheme');
+  schemeEl.value = Math.floor(Math.random() * schemeEl.options.length);
+  setScheme(+schemeEl.value);
+  // Random overlay toggles
+  ['show-original', 'show-circles', 'show-single', 'show-junction', 'show-stats'].forEach(id => {
+    document.getElementById(id).checked = Math.random() > 0.5;
+  });
+  syncPerspVisibility();
+  onInput();
+});
 // ============================================================
 //  Canvas sizing & kick-off
 // ============================================================
@@ -1680,7 +1708,7 @@ document.getElementById('sidebar-toggle').addEventListener('click', () => {
 // ---- Collapsible sections ----
 document.querySelectorAll('.section[data-section]').forEach(hdr => {
   hdr.addEventListener('click', e => {
-    if (e.target.id === 'randomize-btn') return; // don't toggle when clicking Randomize
+    if (e.target.tagName === 'BUTTON') return; // don't toggle when clicking Randomize
     const key = hdr.dataset.section;
     const body = document.querySelector('.section-body[data-section="' + key + '"]');
     hdr.classList.toggle('collapsed');
