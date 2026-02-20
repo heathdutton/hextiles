@@ -212,6 +212,10 @@
     <label>Twist Radius <span id="v-radius">0.17 &times; side</span></label>
     <input type="range" id="radius" min="0" max="0.5" step="0.01" value="0.17">
   </div>
+  <div class="pill-switch" style="margin-bottom:14px">
+    <input type="radio" name="joint" id="joint-angular" value="1" checked><label for="joint-angular">Angular</label>
+    <input type="radio" name="joint" id="joint-circular" value="0"><label for="joint-circular">Circular</label>
+  </div>
 
   <div class="group">
     <label>Edge Rounding <span id="v-round-edge">0.030 &times; side</span></label>
@@ -231,7 +235,19 @@
   </div>
   <div class="gauge-detail" id="hex-dims"></div>
 
-  <div class="section">Display</div>
+  <div class="section">Display Options</div>
+  <div class="group">
+    <label>Theme
+      <select id="scheme" style="float: right;">
+        <option value="0">Neon</option>
+        <option value="1">Berry</option>
+        <option value="2">Earth</option>
+        <option value="3">Ocean</option>
+        <option value="4">Slate</option>
+        <option value="5">Synth</option>
+      </select>
+    </label>
+  </div>
   <div class="group">
     <label>Zoom <span id="v-size">85</span></label>
     <input type="range" id="size" min="8" max="200" step="1" value="85">
@@ -252,26 +268,11 @@
     <label>Perspective <span id="v-perspective">45%</span></label>
     <input type="range" id="perspective" min="1" max="70" step="1" value="45">
   </div>
-
-  <div class="section">Options</div>
-  <div class="cb"><label><input type="checkbox" id="angular" checked> Angular joints</label></div>
   <div class="cb"><label><input type="checkbox" id="show-original"> Show original outline</label></div>
   <div class="cb"><label><input type="checkbox" id="show-circles"> Show twist circles</label></div>
   <div class="cb"><label><input type="checkbox" id="show-single" checked> Show isolated tile</label></div>
   <div class="cb"><label><input type="checkbox" id="show-junction" checked> Show tile junction</label></div>
   <div class="cb"><label><input type="checkbox" id="show-stats" checked> Show stats</label></div>
-  <div class="group" style="margin-top: 10px;">
-    <label>Theme
-      <select id="scheme" style="float: right;">
-        <option value="0">Neon</option>
-        <option value="1">Berry</option>
-        <option value="2">Earth</option>
-        <option value="3">Ocean</option>
-        <option value="4">Slate</option>
-        <option value="5">Synth</option>
-      </select>
-    </label>
-  </div>
 
   <button id="export-btn">Export Tile as SVG</button>
   <button id="export-grid-btn">Export Tile Grid as SVG</button>
@@ -990,7 +991,7 @@ function getP() {
     roundEdge: +document.getElementById('round-edge').value,
     roundVtx:  +document.getElementById('round-vtx').value,
     thickness: +document.getElementById('thickness').value,
-    angular:     document.getElementById('angular').checked,
+    angular:     document.getElementById('joint-angular').checked,
     showOrig:    document.getElementById('show-original').checked,
     showCirc:    document.getElementById('show-circles').checked,
     showSingle:  document.getElementById('show-single').checked,
@@ -1434,12 +1435,13 @@ document.getElementById('export-grid-btn').addEventListener('click', () => {
 //  URL state persistence
 // ============================================================
 
-const CHECKBOXES = ['angular', 'show-original', 'show-circles', 'show-single', 'show-junction', 'show-stats'];
+const CHECKBOXES = ['show-original', 'show-circles', 'show-single', 'show-junction', 'show-stats'];
 
 function saveToUrl() {
   const params = new URLSearchParams();
   sliders.forEach(s => params.set(s.id, document.getElementById(s.id).value));
   CHECKBOXES.forEach(id => params.set(id, document.getElementById(id).checked ? '1' : '0'));
+  params.set('angular', document.getElementById('joint-angular').checked ? '1' : '0');
   params.set('scheme', document.getElementById('scheme').value);
   params.set('sides', SHAPE.sides);
   history.replaceState(null, '', '#' + params.toString());
@@ -1459,6 +1461,11 @@ function loadFromUrl() {
   CHECKBOXES.forEach(id => {
     if (params.has(id)) document.getElementById(id).checked = params.get(id) === '1';
   });
+  if (params.has('angular')) {
+    const ang = params.get('angular') === '1';
+    document.getElementById('joint-angular').checked = ang;
+    document.getElementById('joint-circular').checked = !ang;
+  }
   if (params.has('scheme')) {
     const idx = +params.get('scheme');
     document.getElementById('scheme').value = idx;
@@ -1514,6 +1521,9 @@ document.querySelectorAll('input[name="sides"]').forEach(radio =>
     onInput();
   })
 );
+document.querySelectorAll('input[name="joint"]').forEach(radio =>
+  radio.addEventListener('change', onInput)
+);
 document.getElementById('randomize-btn').addEventListener('click', () => {
   const rng = (min, max, step) => {
     const steps = Math.round((max - min) / step);
@@ -1539,8 +1549,10 @@ document.getElementById('randomize-btn').addEventListener('click', () => {
   const angleEl = document.getElementById('angle');
   if (+angleEl.value > SHAPE.maxTwist) angleEl.value = SHAPE.maxTwist;
   document.getElementById('v-angle').textContent = (+angleEl.value).toFixed(1) + '\u00B0';
-  // Coin-flip angular vs arc
-  document.getElementById('angular').checked = Math.random() > 0.5;
+  // Coin-flip angular vs circular
+  const ang = Math.random() > 0.5;
+  document.getElementById('joint-angular').checked = ang;
+  document.getElementById('joint-circular').checked = !ang;
   onInput();
 });
 // ============================================================
