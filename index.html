@@ -70,7 +70,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
     overflow: hidden;
     min-width: 0;
     min-height: 0;
@@ -79,8 +78,6 @@
   canvas {
     display: block;
     background: var(--canvas);
-    border-radius: 12px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
   }
   h1 { font-size: 20px; margin-bottom: 4px; color: var(--accent); }
   .subtitle { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
@@ -178,6 +175,7 @@
     min-width: 260px;
     max-width: 340px;
     pointer-events: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   }
   .overlay-close {
     position: absolute; top: 6px; right: 8px;
@@ -189,6 +187,46 @@
   #stats-overlay .gauge:last-child { margin-bottom: 0; }
   #stats-overlay .gauge-label { border-top: none; padding-top: 0; margin-bottom: 6px; }
   #stats-overlay .gauge-label:not(:first-child) { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px; margin-top: 4px; }
+
+  /* Mobile toggle button — hidden on desktop */
+  #sidebar-toggle {
+    display: none;
+    position: fixed; bottom: 16px; right: 16px; z-index: 100;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--accent); color: var(--bg); border: none;
+    font-size: 22px; cursor: pointer;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+    transition: transform 0.15s;
+  }
+  #sidebar-toggle:active { transform: scale(0.9); }
+
+  /* Collapsible sections */
+  .section { cursor: pointer; user-select: none; }
+  .section::after { content: '\25B2'; float: right; font-size: 8px; margin-top: 2px; transition: transform 0.2s; }
+  .section.collapsed::after { transform: rotate(180deg); }
+  .section-body { overflow: hidden; transition: max-height 0.25s ease, opacity 0.2s; max-height: 800px; opacity: 1; }
+  .section-body.collapsed { max-height: 0; opacity: 0; }
+
+  /* Mobile layout */
+  @media (max-width: 768px) {
+    body { flex-direction: column; height: auto; overflow: auto; }
+    #sidebar {
+      width: 100%; border-right: none; border-top: 1px solid var(--border);
+      order: 2; padding: 16px 20px;
+      max-height: none;
+    }
+    #sidebar.hidden { display: none; }
+    #main { width: 100%; height: 55vh; min-height: 280px; order: 1; }
+    #sidebar-toggle { display: block; }
+    #stats-overlay { bottom: 12px; left: 12px; min-width: 200px; max-width: 280px; font-size: 11px; }
+    #stats-overlay .gauge-label { font-size: 10px; }
+    .pill-switch label { padding: 6px 0; font-size: 12px; }
+    h1 { font-size: 17px; }
+  }
+  @media (max-width: 480px) {
+    #main { height: 45vh; min-height: 240px; }
+    #stats-overlay { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -197,13 +235,13 @@
   <h1>Gametile Designer</h1>
   <div class="subtitle">Soft-interlocking game tiles</div>
 
-  <div class="pill-switch">
+  <div class="section" data-section="params">Tile Parameters <button id="randomize-btn">Randomize</button></div>
+  <div class="section-body" data-section="params">
+  <div class="pill-switch" style="margin-bottom:10px">
     <input type="radio" name="sides" id="sides-3" value="3"><label for="sides-3">&#9651; Tri</label>
     <input type="radio" name="sides" id="sides-4" value="4"><label for="sides-4">&#9633; Quad</label>
     <input type="radio" name="sides" id="sides-6" value="6" checked><label for="sides-6">&#11042; Hex</label>
   </div>
-
-  <div class="section">Tile Parameters <button id="randomize-btn">Randomize</button></div>
   <div class="group">
     <label>Twist Angle <span id="v-angle">32.0&deg;</span></label>
     <input type="range" id="angle" min="-55" max="55" step="0.5" value="32">
@@ -222,7 +260,7 @@
 
   <div class="group">
     <label>Edge Rounding <span id="v-round-edge">0.030 &times; side</span></label>
-    <input type="range" id="round-edge" min="0" max="0.25" step="0.005" value="0.03">
+    <input type="range" id="round-edge" min="0" max="1.0" step="0.005" value="0.03">
   </div>
   <div class="group">
     <label>Vertex Rounding <span id="v-round-vtx">0.030 &times; side</span></label>
@@ -237,8 +275,10 @@
     <input type="range" id="export-size" min="10" max="60" step="1" value="30">
   </div>
   <div class="gauge-detail" id="hex-dims"></div>
+  </div>
 
-  <div class="section">Display Options</div>
+  <div class="section" data-section="display">Display Options</div>
+  <div class="section-body" data-section="display">
   <div class="group">
     <label>Theme
       <select id="scheme" style="float: right;">
@@ -276,6 +316,7 @@
   <div class="cb"><label><input type="checkbox" id="show-single" checked> Show isolated tile</label></div>
   <div class="cb"><label><input type="checkbox" id="show-junction" checked> Show tile junction</label></div>
   <div class="cb"><label><input type="checkbox" id="show-stats" checked> Show stats</label></div>
+  </div>
 
   <button id="export-btn">Export Tile as SVG</button>
   <button id="export-grid-btn">Export Tile Grid as SVG</button>
@@ -347,6 +388,8 @@
     </div>
   </div>
 </div>
+
+<button id="sidebar-toggle" aria-label="Toggle settings">&#9881;</button>
 
 <script>
 'use strict';
@@ -786,15 +829,16 @@ function setScheme(idx) {
 
 function updateGauge(p) {
   const s        = p.size;
-  const r        = p.radius * s;
+  const sideLen  = 2 * s * Math.sin(Math.PI / SHAPE.sides);
+  const r        = p.radius * sideLen;
   const absDeg   = Math.abs(p.angle);
   const absRad   = deg(absDeg);
-  const rhoEdge  = p.roundEdge * s;
-  const rhoVtx   = p.roundVtx  * s;
+  const rhoEdge  = p.roundEdge * sideLen;
+  const rhoVtx   = p.roundVtx  * sideLen;
   const MU       = 0.35;                // wood-on-wood, moderate
   const thick    = p.thickness;          // mm (physical)
-  const exportMm = p.exportSize;         // mm — user's desired export side
-  const scaleMm  = exportMm / s;         // px → mm at export side
+  const exportMm = p.exportSize;         // mm — user's desired side length
+  const scaleMm  = exportMm / sideLen;   // px → mm at export side
 
   // ---- 1. Effective tab depth (in mm at export scale) ----
   const rawDepth = r * Math.sin(absRad);
@@ -810,7 +854,7 @@ function updateGauge(p) {
   // Tab presence gate: is there a meaningful tab at all?
   // Saturates quickly — even a 1mm tab is "present".
   const depthPresence = effectiveDepthMm < 0.001 ? 0
-    : Math.min(1, 1 - Math.exp(-2 * effectiveDepthMm));
+    : Math.min(1, 1 - Math.exp(-3 * effectiveDepthMm));
 
   // Mechanical block: how much of a physical wall is this tab?
   // A 5mm tab is a serious wall regardless of material.
@@ -848,7 +892,7 @@ function updateGauge(p) {
   // Contact area = face length × thickness (the jog face at Q is independent
   // of vertex rounding — rounding at V doesn't shrink the face at Q).
   const contactArea    = jogChordMm * thick;
-  const refArea        = 4.0 * 2.0;  // mm² — meaningful engagement surface
+  const refArea        = 2.0 * 2.0;  // mm² — meaningful engagement surface
   const contactFactor  = Math.min(1, contactArea / refArea);
 
   // ---- 4. Vertex-rounding contact reduction ----
@@ -910,11 +954,12 @@ function updateGauge(p) {
     `tab ${mmDepth}mm | face ${mmFace}mm \u00D7 ${thick.toFixed(1)}mm | ${lockStr}  (\u00B5=${MU}, ${exportMm}mm side)`;
 
   // Polygon dimensions: side length, flat-to-flat (apothem × 2), point-to-point (circumradius × 2)
-  const sideLen = (2 * exportMm * Math.sin(Math.PI / SHAPE.sides)).toFixed(1);
-  const ftf = (2 * exportMm * Math.cos(Math.PI / SHAPE.sides)).toFixed(1);
-  const ptp = (exportMm * 2).toFixed(1);
+  const circumR = exportMm / (2 * Math.sin(Math.PI / SHAPE.sides));
+  const dimSide = exportMm.toFixed(1);
+  const ftf = (2 * circumR * Math.cos(Math.PI / SHAPE.sides)).toFixed(1);
+  const ptp = (circumR * 2).toFixed(1);
   document.getElementById('hex-dims').textContent =
-    `side ${sideLen}mm | ${ftf}mm flat\u2011to\u2011flat | ${ptp}mm vertex\u2011to\u2011vertex`;
+    `side ${dimSide}mm | ${ftf}mm flat\u2011to\u2011flat | ${ptp}mm vertex\u2011to\u2011vertex`;
 
   // ---- Tab Durability gauge ----
   // Models how easily the tab (protrusion at each jog) can snap off.
@@ -1021,11 +1066,12 @@ function draw() {
   const ox = cvs.width / 2;
   const oy = cvs.height / 2;
   const s = p.size;
-  const r = p.radius * s;
+  const sideLen = 2 * s * Math.sin(Math.PI / SHAPE.sides);
+  const r = p.radius * sideLen;
   const cells = SHAPE.grid(p.gridR);
   const cosTilt = Math.cos(tiltRad);
   const sinTilt = Math.sin(tiltRad);
-  const thickPx = p.thickness * s / p.exportSize;
+  const thickPx = p.thickness * sideLen / p.exportSize;
   const extH = thickPx * sinTilt;
   const persp = +document.getElementById('perspective').value;
   // 1% → ~5× canvas height (nearly flat), 70% → ~0.6× (strong perspective)
@@ -1056,13 +1102,26 @@ function draw() {
     const cy = oy + py * (1 + p.explode);
     const rot = SHAPE.cellRot(cell);
     let outline = tileOutline(cx, cy, s, r, p.angle, p.angular, SHAPE.sides, rot);
-    if (p.roundEdge > 0 || p.roundVtx > 0) outline = roundCorners(outline, p.roundEdge * s, p.roundVtx * s);
+    if (p.roundEdge > 0 || p.roundVtx > 0) outline = roundCorners(outline, p.roundEdge * sideLen, p.roundVtx * sideLen);
     return { cell, cx, cy, outline, ci: SHAPE.cellColor(cell), rot };
   });
   if (tilt > 0) tileData.sort((a, b) => a.cy - b.cy);
 
   // Pre-project all tile outlines
   for (const td of tileData) td.top = td.outline.map(proj);
+
+  // ---- Shadow pass: soft drop shadow beneath tiles ----
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = THEME.canvas;
+  for (const td of tileData) {
+    tracePath(td.top);
+    ctx.fill();
+  }
+  ctx.restore();
 
   // ---- Pass 1: side walls (below table surface) ----
   if (tilt > 0 && extH > 0.5) {
@@ -1153,17 +1212,26 @@ function drawSingleTile(p) {
   const bx = cvs.width - bw - 12;
   const by = 12;
   const s = Math.min(p.size * 1.4, (bw - pad * 2) / 2.3);
-  const r = p.radius * s;
+  const sl = 2 * s * Math.sin(Math.PI / SHAPE.sides);
+  const r = p.radius * sl;
   const cx = bx + bw / 2;
   const cy = by + bh / 2 + 10;
 
-  // Background box (opaque, rounded)
+  // Background box (opaque, rounded) with subtle shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.25)';
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetY = 4;
   ctx.fillStyle = THEME.overlay;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 10);
+  ctx.fill();
+  ctx.restore();
   ctx.strokeStyle = THEME.border;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.roundRect(bx, by, bw, bh, 10);
-  ctx.fill(); ctx.stroke();
+  ctx.stroke();
   drawOverlayClose(bx, by, bw, 'show-single');
 
   // Label
@@ -1191,7 +1259,7 @@ function drawSingleTile(p) {
 
   // Modified outline
   let outline = tileOutline(cx, cy, s, r, p.angle, p.angular, SHAPE.sides);
-  if (p.roundEdge > 0 || p.roundVtx > 0) outline = roundCorners(outline, p.roundEdge * s, p.roundVtx * s);
+  if (p.roundEdge > 0 || p.roundVtx > 0) outline = roundCorners(outline, p.roundEdge * sl, p.roundVtx * sl);
   tracePath(outline);
   ctx.fillStyle = 'rgba(233,69,96,0.2)';
   ctx.fill();
@@ -1248,17 +1316,26 @@ function drawJunction(p) {
   // More tiles at a vertex → need more zoom-out
   const scaleFactor = SHAPE.valence <= 3 ? 4.0 : SHAPE.valence <= 4 ? 3.2 : 2.4;
   const s = Math.min(p.size * scaleFactor, (bw - pad * 2) / 1.44);
-  const r = p.radius * s;
+  const sl = 2 * s * Math.sin(Math.PI / SHAPE.sides);
+  const r = p.radius * sl;
   const cx = bx + bw / 2;
   const cy = by + bh / 2;
 
-  // Background box (opaque, rounded)
+  // Background box (opaque, rounded) with subtle shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.25)';
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetY = 4;
   ctx.fillStyle = THEME.overlay;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 10);
+  ctx.fill();
+  ctx.restore();
   ctx.strokeStyle = THEME.border;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.roundRect(bx, by, bw, bh, 10);
-  ctx.fill(); ctx.stroke();
+  ctx.stroke();
   drawOverlayClose(bx, by, bw, 'show-junction');
 
   // Label
@@ -1287,7 +1364,7 @@ function drawJunction(p) {
     const tcy = offY + py;
     const rot = SHAPE.cellRot(cell);
     let outline = tileOutline(tcx, tcy, s, r, p.angle, p.angular, SHAPE.sides, rot);
-    if (p.roundEdge > 0 || p.roundVtx > 0) outline = roundCorners(outline, p.roundEdge * s, p.roundVtx * s);
+    if (p.roundEdge > 0 || p.roundVtx > 0) outline = roundCorners(outline, p.roundEdge * sl, p.roundVtx * sl);
 
     tracePath(outline);
     ctx.fillStyle = THEME.colors[SHAPE.cellColor(cell)];
@@ -1366,10 +1443,11 @@ function downloadSVG(svgString, filename) {
 
 document.getElementById('export-btn').addEventListener('click', () => {
   const p = getP();
-  const s = p.exportSize;                // mm side length from input
-  const r = p.radius * s;
+  const sl = p.exportSize;               // mm side length from input
+  const s = sl / (2 * Math.sin(Math.PI / SHAPE.sides));  // circumradius in mm
+  const r = p.radius * sl;
   let pts = tileOutline(0, 0, s, r, p.angle, p.angular, SHAPE.sides);
-  if (p.roundEdge > 0 || p.roundVtx > 0) pts = roundCorners(pts, p.roundEdge * s, p.roundVtx * s);
+  if (p.roundEdge > 0 || p.roundVtx > 0) pts = roundCorners(pts, p.roundEdge * sl, p.roundVtx * sl);
 
   // Flip Y so SVG matches standard orientation
   const fp = pts.map(pt => ({ x: pt.x, y: -pt.y }));
@@ -1399,8 +1477,9 @@ document.getElementById('export-btn').addEventListener('click', () => {
 // Grid SVG export — all tiles in the current grid
 document.getElementById('export-grid-btn').addEventListener('click', () => {
   const p = getP();
-  const s = p.exportSize;
-  const r = p.radius * s;
+  const sl = p.exportSize;
+  const s = sl / (2 * Math.sin(Math.PI / SHAPE.sides));  // circumradius in mm
+  const r = p.radius * sl;
   const cells = SHAPE.grid(p.gridR);
 
   const paths = [];
@@ -1410,7 +1489,7 @@ document.getElementById('export-grid-btn').addEventListener('click', () => {
     const { x: px, y: py } = SHAPE.cell2px(cell, s);
     const rot = SHAPE.cellRot(cell);
     let pts = tileOutline(px, py, s, r, p.angle, p.angular, SHAPE.sides, rot);
-    if (p.roundEdge > 0 || p.roundVtx > 0) pts = roundCorners(pts, p.roundEdge * s, p.roundVtx * s);
+    if (p.roundEdge > 0 || p.roundVtx > 0) pts = roundCorners(pts, p.roundEdge * sl, p.roundVtx * sl);
     const fp = pts.map(pt => ({ x: pt.x, y: -pt.y }));
     for (const pt of fp) {
       if (pt.x < xMin) xMin = pt.x;
@@ -1541,7 +1620,7 @@ document.getElementById('randomize-btn').addEventListener('click', () => {
   const tileSliders = [
     { id: 'angle',       vid: 'v-angle',       min: -SHAPE.maxTwist, max: SHAPE.maxTwist, step: 0.5, fmt: v => v.toFixed(1) + '\u00B0' },
     { id: 'radius',      vid: 'v-radius',      min: 0.05, max: 0.45, step: 0.01, fmt: v => v.toFixed(2) + ' \u00D7 side' },
-    { id: 'round-edge',  vid: 'v-round-edge',  min: 0, max: 0.15, step: 0.005, fmt: v => (+v).toFixed(3) + ' \u00D7 side' },
+    { id: 'round-edge',  vid: 'v-round-edge',  min: 0, max: 0.5, step: 0.005, fmt: v => (+v).toFixed(3) + ' \u00D7 side' },
     { id: 'round-vtx',   vid: 'v-round-vtx',   min: 0, max: 0.15, step: 0.005, fmt: v => (+v).toFixed(3) + ' \u00D7 side' },
     { id: 'thickness',   vid: 'v-thickness',    min: 1, max: 5, step: 0.1, fmt: v => (+v).toFixed(1) + ' mm' },
     { id: 'export-size', vid: 'v-export-size',  min: 15, max: 50, step: 1, fmt: v => v + ' mm' },
@@ -1584,6 +1663,24 @@ document.getElementById('close-stats-btn').addEventListener('click', () => {
 setScheme(0);
 loadFromUrl();
 syncPerspVisibility();
+// ---- Mobile sidebar toggle ----
+document.getElementById('sidebar-toggle').addEventListener('click', () => {
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('hidden');
+  resize();
+});
+
+// ---- Collapsible sections ----
+document.querySelectorAll('.section[data-section]').forEach(hdr => {
+  hdr.addEventListener('click', e => {
+    if (e.target.id === 'randomize-btn') return; // don't toggle when clicking Randomize
+    const key = hdr.dataset.section;
+    const body = document.querySelector('.section-body[data-section="' + key + '"]');
+    hdr.classList.toggle('collapsed');
+    body.classList.toggle('collapsed');
+  });
+});
+
 window.addEventListener('resize', resize);
 window.addEventListener('hashchange', () => { loadFromUrl(); syncPerspVisibility(); onInput(); });
 resize();
