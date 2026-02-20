@@ -62,10 +62,10 @@
     box-shadow: 0 4px 24px rgba(0,0,0,0.5);
   }
   h1 { font-size: 20px; margin-bottom: 4px; color: var(--accent); }
-  .subtitle { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .subtitle { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
   #randomize-btn {
-    font-size: 11px; color: var(--muted); background: none; border: 1px solid var(--border);
-    border-radius: 4px; padding: 3px 10px; cursor: pointer; margin-bottom: 16px; display: block;
+    font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 8px; cursor: pointer; float: right;
     transition: color 0.15s, border-color 0.15s;
   }
   #randomize-btn:hover { color: var(--accent); border-color: var(--accent); }
@@ -175,7 +175,6 @@
 <div id="sidebar">
   <h1>Gametile Designer</h1>
   <div class="subtitle">Soft-interlocking game tiles</div>
-  <button id="randomize-btn">Randomize</button>
 
   <div class="pill-switch">
     <input type="radio" name="sides" id="sides-3" value="3"><label for="sides-3">&#9651; Tri</label>
@@ -183,7 +182,7 @@
     <input type="radio" name="sides" id="sides-6" value="6" checked><label for="sides-6">&#11042; Hex</label>
   </div>
 
-  <div class="section">Tile Parameters</div>
+  <div class="section">Tile Parameters <button id="randomize-btn">Randomize</button></div>
   <div class="group">
     <label>Twist Angle <span id="v-angle">32.0&deg;</span></label>
     <input type="range" id="angle" min="-55" max="55" step="0.5" value="32">
