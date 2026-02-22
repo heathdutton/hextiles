@@ -56,6 +56,7 @@
     display: flex;
     height: 100vh;
     overflow: hidden;
+    transition: background-color 0.6s ease;
   }
   #sidebar {
     width: 300px;
@@ -64,6 +65,7 @@
     overflow-y: auto;
     flex-shrink: 0;
     border-right: 1px solid var(--border);
+    transition: background-color 0.6s ease, border-color 0.6s ease;
   }
   #main {
     flex: 1;
@@ -78,8 +80,9 @@
   canvas {
     display: block;
     background: var(--canvas);
+    transition: background-color 0.6s ease;
   }
-  h1 { font-size: 20px; margin-bottom: 4px; color: var(--accent); }
+  h1 { font-size: 20px; margin-bottom: 4px; color: var(--accent); transition: color 0.6s ease; }
   .subtitle { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
   .section-wrap summary button {
     font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border);
@@ -97,13 +100,21 @@
   #export-btn {
     width: 100%; padding: 10px; background: var(--accent); color: var(--bg);
     border: none; border-radius: 6px; cursor: pointer; font-size: 13px; margin-top: 8px; font-weight: 600;
+    transition: background-color 0.6s ease, color 0.6s ease;
   }
   #export-btn:hover { background: var(--accent-hover); }
   #export-grid-btn {
     width: 100%; padding: 8px; background: transparent; color: var(--accent);
     border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 6px;
+    transition: color 0.6s ease, border-color 0.6s ease;
   }
   #export-grid-btn:hover { background: rgba(200,200,200,0.08); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  #demo-btn {
+    width: 100%; padding: 8px; background: transparent; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 6px;
+  }
+  #demo-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #demo-btn.active { border-color: var(--accent); color: var(--bg); background: var(--accent); }
   .info { font-size: 11px; color: var(--muted); margin-top: 16px; line-height: 1.6; }
   .examples { font-size: 12px; }
   .examples a { display: block; color: var(--link); text-decoration: none; padding: 2px 0; }
@@ -113,7 +124,7 @@
 
   /* Interlock gauge */
   .gauge { margin: 16px 0 6px; }
-  .gauge-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .gauge-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; border-top: 1px solid var(--border); padding-top: 14px; transition: color 0.6s ease, border-color 0.6s ease; }
   .gauge-track {
     height: 10px; border-radius: 5px; position: relative;
     background: linear-gradient(to right, #4a7fb5, #2a9d8f 25%, #8ab840 45%, #f4a261 65%, #e94560 85%, #a00030);
@@ -295,7 +306,7 @@
   </div>
   <div class="group">
     <label>Zoom <span id="v-size">85</span></label>
-    <input type="range" id="size" min="8" max="200" step="1" value="85">
+    <input type="range" id="size" min="8" max="200" step="0.1" value="85">
   </div>
   <div class="group">
     <label>Grid Size <span id="v-grid">5</span></label>
@@ -303,15 +314,19 @@
   </div>
   <div class="group">
     <label>Explode <span id="v-explode">0%</span></label>
-    <input type="range" id="explode" min="0" max="60" step="1" value="0">
+    <input type="range" id="explode" min="0" max="60" step="0.1" value="0">
   </div>
   <div class="group">
     <label>Tilt <span id="v-tilt">40°</span></label>
-    <input type="range" id="tilt" min="0" max="60" step="1" value="40">
+    <input type="range" id="tilt" min="0" max="60" step="0.1" value="40">
   </div>
   <div class="group" id="perspective-group">
     <label>Perspective <span id="v-perspective">45%</span></label>
-    <input type="range" id="perspective" min="1" max="70" step="1" value="45">
+    <input type="range" id="perspective" min="1" max="70" step="0.1" value="45">
+  </div>
+  <div class="group">
+    <label>Rotation <span id="v-rotation">0°</span></label>
+    <input type="range" id="rotation" min="-180" max="180" step="0.1" value="0">
   </div>
   <div class="cb"><label><input type="checkbox" id="show-original"> Show original outline</label></div>
   <div class="cb"><label><input type="checkbox" id="show-circles"> Show twist circles</label></div>
@@ -322,6 +337,7 @@
 
   <button id="export-btn">Export Tile as SVG</button>
   <button id="export-grid-btn">Export Tile Grid as SVG</button>
+  <button id="demo-btn">Play Demo</button>
 
   <details class="section-wrap examples">
     <summary>Examples</summary>
@@ -446,13 +462,83 @@ cvs.addEventListener('click', e => {
   }
 });
 
+// ---- Canvas interaction: close buttons, drag, scroll zoom ----
+let dragging = false, dragStartX = 0, dragStartY = 0, dragStartTilt = 0, dragStartRot = 0;
+
+function updateSlider(id, vid, fmt, val) {
+  const el = document.getElementById(id);
+  val = Math.max(+el.min, Math.min(+el.max, val));
+  el.value = val;
+  document.getElementById(vid).textContent = fmt(+el.value);
+}
+
 cvs.addEventListener('mousemove', e => {
+  if (dragging) {
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    updateSlider('tilt', 'v-tilt', v => v + '\u00B0', Math.round(dragStartTilt - dy * 0.3));
+    updateSlider('rotation', 'v-rotation', v => v + '\u00B0', Math.round(dragStartRot + dx * 0.5));
+    syncPerspVisibility();
+    onInput();
+    return;
+  }
   const { x, y } = canvasMouseCoords(e);
   const hit = hitCloseRegion(x, y);
   cvs.style.cursor = hit ? 'pointer' : '';
   const newHover = hit ? hit.id : null;
   if (newHover !== hoveredClose) { hoveredClose = newHover; draw(); }
 });
+
+cvs.addEventListener('mousedown', e => {
+  const { x, y } = canvasMouseCoords(e);
+  if (hitCloseRegion(x, y)) return;
+  dragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  dragStartTilt = +document.getElementById('tilt').value;
+  dragStartRot = +document.getElementById('rotation').value;
+  cvs.style.cursor = 'grabbing';
+  e.preventDefault();
+});
+
+window.addEventListener('mouseup', () => {
+  if (dragging) { dragging = false; cvs.style.cursor = ''; }
+});
+
+// Touch drag support
+cvs.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    dragging = true;
+    dragStartX = t.clientX;
+    dragStartY = t.clientY;
+    dragStartTilt = +document.getElementById('tilt').value;
+    dragStartRot = +document.getElementById('rotation').value;
+  }
+}, { passive: true });
+
+cvs.addEventListener('touchmove', e => {
+  if (dragging && e.touches.length === 1) {
+    const t = e.touches[0];
+    const dx = t.clientX - dragStartX;
+    const dy = t.clientY - dragStartY;
+    updateSlider('tilt', 'v-tilt', v => v + '\u00B0', Math.round(dragStartTilt - dy * 0.3));
+    updateSlider('rotation', 'v-rotation', v => v + '\u00B0', Math.round(dragStartRot + dx * 0.5));
+    syncPerspVisibility();
+    onInput();
+  }
+}, { passive: true });
+
+cvs.addEventListener('touchend', () => { dragging = false; });
+
+// Scroll wheel / pinch zoom
+cvs.addEventListener('wheel', e => {
+  e.preventDefault();
+  const el = document.getElementById('size');
+  const delta = e.deltaY > 0 ? -3 : 3;
+  updateSlider('size', 'v-size', v => v, Math.round(+el.value + delta));
+  onInput();
+}, { passive: false });
 
 // ============================================================
 //  Polygon geometry
@@ -961,7 +1047,7 @@ function updateGauge(p) {
   const lockAngleDeg = (lockAngleRad * 180 / Math.PI).toFixed(0);
   const lockStr   = tanFace <= MU ? 'self-locking' : 'slides (past ' + lockAngleDeg + '\u00B0)';
   document.getElementById('gauge-detail').textContent =
-    `tab ${mmDepth}mm | face ${mmFace}mm \u00D7 ${thick.toFixed(1)}mm | ${lockStr}  (\u00B5=${MU}, ${exportMm}mm side)`;
+    `tab ${mmDepth}mm | face ${mmFace}mm \u00D7 ${thick.toFixed(1)}mm | ${lockStr}  (\u00B5=${MU}, ${exportMm.toFixed(1)}mm side)`;
 
   // Polygon dimensions: side length, flat-to-flat (apothem × 2), point-to-point (circumradius × 2)
   const circumR = exportMm / (2 * Math.sin(Math.PI / SHAPE.sides));
@@ -1062,6 +1148,7 @@ function getP() {
     thickness: +document.getElementById('thickness').value,
     tilt:    +document.getElementById('tilt').value,
     perspective: +document.getElementById('perspective').value,
+    rotation: +document.getElementById('rotation').value,
     angular:     document.getElementById('joint-angular').checked,
     showOrig:    document.getElementById('show-original').checked,
     showCirc:    document.getElementById('show-circles').checked,
@@ -1076,7 +1163,7 @@ function getP() {
 // ---- Animated parameter interpolation ----
 // Numeric params lerp toward target over ~100ms (exponential ease-out).
 const ANIM_KEYS = ['angle','radius','size','explode','roundEdge','roundVtx',
-  'thickness','exportSize','tilt','perspective'];
+  'thickness','exportSize','tilt','perspective','rotation'];
 let animP = null;   // current animated state
 let animRaf = null;  // pending rAF id
 
@@ -1110,12 +1197,81 @@ function animLoop() {
   if (!animP) animP = { ...tgt };
   const moving = lerpP(animP, tgt);
   drawWithP(animP);
-  if (moving) animRaf = requestAnimationFrame(animLoop);
+  const shapeStillFading = shapeFadeStart > 0 && performance.now() - shapeFadeStart < SHAPE_FADE_DUR;
+  if (moving || cellFades.size > 0 || shapeStillFading) animRaf = requestAnimationFrame(animLoop);
 }
 
 function startAnim() {
   if (!animRaf) animRaf = requestAnimationFrame(animLoop);
 }
+
+// ---- Cell fade tracking: smooth opacity for appearing/disappearing tiles ----
+const FADE_DUR = 300; // ms
+const cellFades = new Map();  // cellKey → { born: timestamp, dying: timestamp|null }
+let prevCellKeys = new Set();
+let prevShapeSides = 0;
+
+function cellKeyOf(c) {
+  return c.q !== undefined ? `${c.q},${c.r}` : c.up !== undefined ? `${c.col},${c.row},${c.up}` : `${c.col},${c.row}`;
+}
+
+function updateCellFades(cells, shapeSides) {
+  const now = performance.now();
+  const curKeys = new Set(cells.map(cellKeyOf));
+
+  // Shape changed — reset everything, no fade
+  if (shapeSides !== prevShapeSides) {
+    cellFades.clear();
+    prevCellKeys = curKeys;
+    prevShapeSides = shapeSides;
+    return;
+  }
+
+  // New cells: start fading in
+  for (const k of curKeys) {
+    if (!prevCellKeys.has(k)) {
+      cellFades.set(k, { born: now, dying: null });
+    } else if (cellFades.has(k) && cellFades.get(k).dying) {
+      // Was dying, now back — restart fade-in
+      cellFades.set(k, { born: now, dying: null });
+    }
+  }
+
+  // Removed cells: mark as dying (they'll be rendered as ghost tiles)
+  for (const k of prevCellKeys) {
+    if (!curKeys.has(k)) {
+      const existing = cellFades.get(k);
+      if (!existing || !existing.dying) {
+        cellFades.set(k, { born: existing ? existing.born : 0, dying: now });
+      }
+    }
+  }
+
+  // Clean up fully faded-out entries
+  for (const [k, f] of cellFades) {
+    if (f.dying && now - f.dying > FADE_DUR) cellFades.delete(k);
+    else if (!f.dying && now - f.born > FADE_DUR) cellFades.delete(k); // fully visible
+  }
+
+  prevCellKeys = curKeys;
+  prevShapeSides = shapeSides;
+}
+
+function getCellOpacity(cell) {
+  const k = cellKeyOf(cell);
+  const f = cellFades.get(k);
+  if (!f) return 1;
+  const now = performance.now();
+  if (f.dying) return Math.max(0, 1 - (now - f.dying) / FADE_DUR);
+  return Math.min(1, (now - f.born) / FADE_DUR);
+}
+
+// ---- Shape crossfade: snapshot old frame, blend with new ----
+const snapCvs = document.createElement('canvas');
+const snapCtx = snapCvs.getContext('2d');
+let shapeFadeStart = 0;
+let shapeFadePrev = 0;
+const SHAPE_FADE_DUR = 350; // ms
 
 function drawWithP(p) {
   closeRegions = [];
@@ -1123,14 +1279,33 @@ function drawWithP(p) {
   const tiltRad = tilt * Math.PI / 180;
   document.getElementById('stats-overlay').style.display = p.showStats ? '' : 'none';
   updateGauge(p);
+
+  // Detect shape change — snapshot current canvas before clearing
+  if (prevShapeSides && SHAPE.sides !== shapeFadePrev) {
+    snapCvs.width = cvs.width;
+    snapCvs.height = cvs.height;
+    snapCtx.drawImage(cvs, 0, 0);
+    shapeFadeStart = performance.now();
+  }
+  shapeFadePrev = SHAPE.sides;
+
   ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+  // Draw old snapshot fading out
+  const fadeElapsed = performance.now() - shapeFadeStart;
+  const shapeFading = shapeFadeStart > 0 && fadeElapsed < SHAPE_FADE_DUR;
+  if (shapeFading) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - fadeElapsed / SHAPE_FADE_DUR);
+    ctx.drawImage(snapCvs, 0, 0);
+    ctx.restore();
+  }
 
   const ox = cvs.width / 2;
   const oy = cvs.height / 2;
   const s = p.size;
   const sideLen = 2 * s * Math.sin(Math.PI / SHAPE.sides);
   const r = p.radius * sideLen;
-  const cells = SHAPE.grid(p.gridR);
   const cosTilt = Math.cos(tiltRad);
   const sinTilt = Math.sin(tiltRad);
   const thickPx = p.thickness * sideLen / p.exportSize;
@@ -1140,11 +1315,17 @@ function drawWithP(p) {
   const focalDist = cvs.height * (0.4 + 4.6 * Math.pow(1 - persp / 70, 2));
 
   // Project a top-face point with perspective + Y compression
+  // Clamp scale to avoid singularity when points approach/pass the focal plane
+  const perspScale = z => {
+    const denom = focalDist + z;
+    return denom > focalDist * 0.05 ? focalDist / denom : focalDist / (focalDist * 0.05);
+  };
+
   const proj = tilt > 0
     ? pt => {
         const yRel = pt.y - oy;
         const z = -yRel * sinTilt;
-        const sc = focalDist / (focalDist + z);
+        const sc = perspScale(z);
         return { x: ox + (pt.x - ox) * sc, y: oy + yRel * cosTilt * sc };
       }
     : pt => pt;
@@ -1153,19 +1334,46 @@ function drawWithP(p) {
   const projBot = pt => {
     const yRel = pt.y - oy;
     const z = -yRel * sinTilt + thickPx * cosTilt;
-    const sc = focalDist / (focalDist + z);
+    const sc = perspScale(z);
     return { x: ox + (pt.x - ox) * sc, y: oy + (yRel * cosTilt + thickPx * sinTilt) * sc };
   };
 
-  // Build tile data, sort back-to-front when tilted
-  const tileData = cells.map(cell => {
+  // Table rotation (rotate entire grid around canvas center)
+  const rotRad = (p.rotation || 0) * Math.PI / 180;
+  const cosRot = Math.cos(rotRad), sinRot = Math.sin(rotRad);
+  const rotPt = rotRad === 0 ? (x, y) => ({ x, y }) : (x, y) => {
+    const dx = x - ox, dy = y - oy;
+    return { x: ox + dx * cosRot - dy * sinRot, y: oy + dx * sinRot + dy * cosRot };
+  };
+
+  // Build tile data with fade for grid size transitions
+  const cells = SHAPE.grid(Math.round(p.gridR));
+  updateCellFades(cells, SHAPE.sides);
+
+  // Collect current cells + dying ghost cells
+  const allCells = [...cells];
+  const dyingKeys = new Set(cells.map(cellKeyOf));
+  for (const [k, f] of cellFades) {
+    if (f.dying && !dyingKeys.has(k)) {
+      // Parse key back to cell — reconstruct from the key format
+      const parts = k.split(',');
+      if (SHAPE.sides === 6) allCells.push({ q: +parts[0], r: +parts[1] });
+      else if (SHAPE.sides === 3) allCells.push({ col: +parts[0], row: +parts[1], up: parts[2] === 'true' });
+      else allCells.push({ col: +parts[0], row: +parts[1] });
+    }
+  }
+
+  const tileData = allCells.map(cell => {
     const { x: px, y: py } = SHAPE.cell2px(cell, s);
-    const cx = ox + px * (1 + p.explode);
-    const cy = oy + py * (1 + p.explode);
-    const rot = SHAPE.cellRot(cell);
+    const rawCx = ox + px * (1 + p.explode);
+    const rawCy = oy + py * (1 + p.explode);
+    const { x: cx, y: cy } = rotPt(rawCx, rawCy);
+    const rot = SHAPE.cellRot(cell) + rotRad;
     let outline = tileOutline(cx, cy, s, r, p.angle, p.angular, SHAPE.sides, rot);
     if (p.roundEdge > 0 || p.roundVtx > 0) outline = roundCorners(outline, p.roundEdge * sideLen, p.roundVtx * sideLen);
-    return { cell, cx, cy, outline, ci: SHAPE.cellColor(cell), rot };
+    const cellFade = getCellOpacity(cell);
+    const shapeFade = shapeFading ? Math.min(1, fadeElapsed / SHAPE_FADE_DUR) : 1;
+    return { cell, cx, cy, outline, ci: SHAPE.cellColor(cell), rot, fade: cellFade * shapeFade };
   });
   if (tilt > 0) tileData.sort((a, b) => a.cy - b.cy);
 
@@ -1180,9 +1388,11 @@ function drawWithP(p) {
   ctx.shadowOffsetY = 8;
   ctx.fillStyle = THEME.canvas;
   for (const td of tileData) {
+    ctx.globalAlpha = td.fade;
     tracePath(td.top);
     ctx.fill();
   }
+  ctx.globalAlpha = 1;
   ctx.restore();
 
   // ---- Pass 1: side walls (below table surface) ----
@@ -1190,6 +1400,7 @@ function drawWithP(p) {
     for (const td of tileData) {
       const sideColor = darkenHex(THEME.colors[td.ci], 0.4);
       const edgeColor = darkenHex(THEME.colors[td.ci], 0.55);
+      ctx.globalAlpha = td.fade;
       for (let i = 0; i < td.top.length; i++) {
         const j = (i + 1) % td.top.length;
         // Outward normal from original (un-projected) outline (CW winding)
@@ -1216,6 +1427,7 @@ function drawWithP(p) {
         ctx.stroke();
       }
     }
+    ctx.globalAlpha = 1;
   }
 
   // ---- Pass 2: top faces (table surface, always above side walls) ----
@@ -1223,10 +1435,10 @@ function drawWithP(p) {
     // Top face
     tracePath(td.top);
     ctx.fillStyle = THEME.colors[td.ci];
-    ctx.globalAlpha = 0.75;
+    ctx.globalAlpha = 0.75 * td.fade;
     ctx.fill();
-    ctx.globalAlpha = 1;
 
+    ctx.globalAlpha = td.fade;
     tracePath(td.top);
     ctx.strokeStyle = THEME.stroke;
     ctx.lineWidth = 1.4;
@@ -1256,6 +1468,7 @@ function drawWithP(p) {
       });
     }
   }
+  ctx.globalAlpha = 1;
 
   // ---- Inset: isolated single tile ----
   if (p.showSingle) drawSingleTile(p);
@@ -1542,7 +1755,7 @@ document.getElementById('export-grid-btn').addEventListener('click', () => {
   const sl = p.exportSize;
   const s = sl / (2 * Math.sin(Math.PI / SHAPE.sides));  // circumradius in mm
   const r = p.radius * sl;
-  const cells = SHAPE.grid(p.gridR);
+  const cells = SHAPE.grid(Math.round(p.gridR));
 
   const paths = [];
   let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
@@ -1642,6 +1855,7 @@ const sliders = [
   { id: 'explode', vid: 'v-explode', fmt: v => v + '%' },
   { id: 'tilt',    vid: 'v-tilt',    fmt: v => v + '\u00B0' },
   { id: 'perspective', vid: 'v-perspective', fmt: v => v + '%' },
+  { id: 'rotation', vid: 'v-rotation', fmt: v => v + '\u00B0' },
 ];
 
 function draw() { animP = null; animLoop(); }  // immediate (resize, init)
@@ -1716,6 +1930,8 @@ document.getElementById('randomize-display-btn').addEventListener('click', () =>
     { id: 'explode',     vid: 'v-explode',     min: 0,  max: 30,  step: 1, fmt: v => v + '%' },
     { id: 'tilt',        vid: 'v-tilt',        min: 0,  max: 55,  step: 1, fmt: v => v + '\u00B0' },
     { id: 'perspective', vid: 'v-perspective',  min: 10, max: 60,  step: 1, fmt: v => v + '%' },
+    { id: 'rotation',    vid: 'v-rotation',     min: -180, max: 180, step: 1, fmt: v => v + '°' },
+    { id: 'grid',        vid: 'v-grid',         min: 3,   max: 7,   step: 1, fmt: v => v },
   ];
   displaySliders.forEach(s => {
     const val = rng(s.min, s.max, s.step);
@@ -1729,6 +1945,138 @@ document.getElementById('randomize-display-btn').addEventListener('click', () =>
   syncPerspVisibility();
   onInput();
 });
+// ============================================================
+//  Play Demo
+// ============================================================
+let demoRaf = null, demoFrom = null, demoTo = null, demoStart = 0;
+let demoStep = 0;
+const DEMO_DUR = 2000; // ms
+const DEMO_SHAPES = [6, 4, 3]; // hex → square → triangle
+
+function cubicInOut(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+// Demo state uses raw slider values (no getP() conversion) to avoid scale mismatches.
+const DEMO_SLIDERS = [
+  { key: 'angle',      id: 'angle',       vid: 'v-angle',       fmt: v => v.toFixed(1) + '\u00B0' },
+  { key: 'radius',     id: 'radius',      vid: 'v-radius',      fmt: v => v.toFixed(2) + ' \u00D7 side' },
+  { key: 'roundEdge',  id: 'round-edge',  vid: 'v-round-edge',  fmt: v => (+v).toFixed(3) + ' \u00D7 side' },
+  { key: 'roundVtx',   id: 'round-vtx',   vid: 'v-round-vtx',   fmt: v => (+v).toFixed(3) + ' \u00D7 side' },
+  { key: 'thickness',  id: 'thickness',   vid: 'v-thickness',    fmt: v => (+v).toFixed(1) + ' mm' },
+  { key: 'exportSize', id: 'export-size', vid: 'v-export-size',  fmt: v => Math.round(v) + ' mm' },
+  { key: 'size',       id: 'size',        vid: 'v-size',         fmt: v => Math.round(v) },
+  { key: 'explode',    id: 'explode',     vid: 'v-explode',      fmt: v => Math.round(v) + '%' },
+  { key: 'tilt',       id: 'tilt',        vid: 'v-tilt',         fmt: v => Math.round(v) + '\u00B0' },
+  { key: 'perspective',id: 'perspective', vid: 'v-perspective',  fmt: v => Math.round(v) + '%' },
+  { key: 'rotation',   id: 'rotation',    vid: 'v-rotation',     fmt: v => Math.round(v) + '\u00B0' },
+  { key: 'gridR',      id: 'grid',        vid: 'v-grid',         fmt: v => Math.round(v) },
+];
+
+function demoRandomTarget(forceSides) {
+  const rng = (min, max, step) => {
+    const steps = Math.round((max - min) / step);
+    return min + Math.round(Math.random() * steps) * step;
+  };
+  const sides = forceSides || DEMO_SHAPES[Math.floor(demoStep / 5) % DEMO_SHAPES.length];
+  const S = SHAPES[sides];
+  demoStep++;
+  return {
+    angle:      rng(-S.maxTwist, S.maxTwist, 0.5),
+    radius:     rng(0.05, 0.45, 0.01),
+    roundEdge:  rng(0, 0.1, 0.001),
+    roundVtx:   rng(0, 0.15, 0.005),
+    thickness:  rng(1, 5, 0.1),
+    exportSize: rng(15, 50, 1),
+    size:       rng(30, 150, 1),
+    explode:    rng(0, 30, 1),
+    tilt:       rng(0, 55, 1),
+    perspective:rng(10, 60, 1),
+    rotation:   rng(-90, 90, 1),
+    gridR:      rng(3, 6, 1),
+    angular:    Math.random() > 0.5,
+    scheme:     Math.floor(Math.random() * document.getElementById('scheme').options.length),
+    sides:      sides,
+  };
+}
+
+function demoSnapshotCurrent() {
+  const snap = { sides: SHAPE.sides, angular: document.getElementById('joint-angular').checked,
+    scheme: +document.getElementById('scheme').value };
+  DEMO_SLIDERS.forEach(s => { snap[s.key] = +document.getElementById(s.id).value; });
+  return snap;
+}
+
+function demoApply(snap) {
+  setShape(snap.sides);
+  DEMO_SLIDERS.forEach(s => {
+    document.getElementById(s.id).value = snap[s.key];
+    document.getElementById(s.vid).textContent = s.fmt(+document.getElementById(s.id).value);
+  });
+  document.getElementById('joint-angular').checked = snap.angular;
+  document.getElementById('joint-circular').checked = !snap.angular;
+  setScheme(snap.scheme);
+  document.getElementById('scheme').value = snap.scheme;
+  syncPerspVisibility();
+}
+
+const DEMO_LERP_KEYS = DEMO_SLIDERS.map(s => s.key);
+
+function demoLerp(from, to, t) {
+  const out = {};
+  for (const k of DEMO_LERP_KEYS) {
+    out[k] = from[k] + (to[k] - from[k]) * t;
+  }
+  // Discrete: snap at halfway
+  out.angular = t < 0.5 ? from.angular : to.angular;
+  out.scheme  = t < 0.5 ? from.scheme  : to.scheme;
+  out.sides   = t < 0.5 ? from.sides   : to.sides;
+  return out;
+}
+
+function demoLoop(ts) {
+  if (!demoRaf) return;
+  const elapsed = ts - demoStart;
+  const t = Math.min(1, elapsed / DEMO_DUR);
+  const eased = cubicInOut(t);
+  const snap = demoLerp(demoFrom, demoTo, eased);
+  demoApply(snap);
+  // Draw directly with interpolated params (bypass normal anim system)
+  animP = null;
+  drawWithP(getP());
+  if (t < 1) {
+    demoRaf = requestAnimationFrame(demoLoop);
+  } else {
+    // Cycle: current target becomes new start, pick new target
+    demoFrom = { ...demoTo };
+    demoTo = demoRandomTarget();
+    demoStart = ts;
+    demoRaf = requestAnimationFrame(demoLoop);
+  }
+}
+
+document.getElementById('demo-btn').addEventListener('click', () => {
+  const btn = document.getElementById('demo-btn');
+  if (demoRaf) {
+    // Stop demo
+    cancelAnimationFrame(demoRaf);
+    demoRaf = null;
+    btn.classList.remove('active');
+    btn.textContent = 'Play Demo';
+    saveToUrl();
+    return;
+  }
+  // Start demo — begin from current shape, rotate after 5 steps
+  btn.classList.add('active');
+  btn.textContent = 'Stop Demo';
+  const curIdx = DEMO_SHAPES.indexOf(SHAPE.sides);
+  demoStep = (curIdx >= 0 ? curIdx : 0) * 5;
+  demoFrom = demoSnapshotCurrent();
+  demoTo = demoRandomTarget(SHAPE.sides);
+  demoStart = performance.now();
+  demoRaf = requestAnimationFrame(demoLoop);
+});
+
 // ============================================================
 //  Canvas sizing & kick-off
 // ============================================================
