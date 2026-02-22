@@ -93,7 +93,14 @@
   .group { margin-bottom: 14px; }
   .group > label { display: block; font-size: 13px; margin-bottom: 4px; color: var(--label); cursor: pointer; }
   .group > label:hover { color: var(--accent); }
-  .group label span { float: right; color: var(--accent); font-weight: bold; }
+  .group label span { float: right; color: var(--accent); font-weight: bold; cursor: text; }
+  .group label span:hover { text-decoration: underline; }
+  .val-input {
+    float: right; width: 70px; background: var(--bg); color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 3px; font-size: 12px;
+    font-weight: bold; text-align: right; padding: 0 4px; outline: none;
+    font-family: inherit;
+  }
   input[type=range] { width: 100%; accent-color: var(--accent); }
   .cb { margin-bottom: 10px; }
   .cb label { font-size: 13px; color: var(--label); cursor: pointer; display: flex; align-items: center; gap: 8px; }
@@ -310,7 +317,7 @@
     </label>
   </div>
   <div class="group">
-    <label>Zoom <span id="v-size">85</span></label>
+    <label>Zoom <span id="v-size">85%</span></label>
     <input type="range" id="size" min="8" max="200" step="0.1" value="85">
   </div>
   <div class="group">
@@ -369,11 +376,13 @@
   </details>
 
   <div class="info">
-    At each vertex where tiles meet, the edges are "twisted" by the twist
-    angle within the twist radius. Each edge gets a small tab at one end and a
-    notch at the other &mdash; tiles softly interlock, easy to place from above
-    but resistant to sliding apart. Tiles still meet at each vertex point
-    (no voids). Tab depth &asymp; r &times; sin(&theta;).
+    Edges are twisted at each vertex within the twist radius, giving every
+    side a tab and matching notch. Tiles drop in from above and resist
+    sliding apart. Side smoothing adds S-curves between joints for
+    rounder shapes. Edge and vertex rounding soften corners. Click any
+    label to zero it; click a value to type one in (even beyond slider
+    limits). Scroll to zoom; drag to pan. Export single tiles or full
+    grids as SVG. All settings save in the URL.
   </div>
   <a href="https://github.com/heathdutton/gametile-designer" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:6px; margin-top:16px; font-size:12px; color:var(--label); text-decoration:none; border:1px solid var(--border); border-radius:6px; padding:6px 12px; transition:border-color 0.15s, color 0.15s;" onmouseover="this.style.borderColor=this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--label)'"><svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
 </div>
@@ -541,7 +550,7 @@ cvs.addEventListener('wheel', e => {
   e.preventDefault();
   const el = document.getElementById('size');
   const delta = e.deltaY > 0 ? -3 : 3;
-  updateSlider('size', 'v-size', v => v, Math.round(+el.value + delta));
+  updateSlider('size', 'v-size', v => v + '%', Math.round(+el.value + delta));
   onInput();
 }, { passive: false });
 
@@ -1967,7 +1976,7 @@ const sliders = [
   { id: 'side-smooth', vid: 'v-side-smooth', fmt: v => v + '%' },
   { id: 'thickness', vid: 'v-thickness', fmt: v => (+v).toFixed(1) + ' mm' },
   { id: 'export-size', vid: 'v-export-size', fmt: v => v + ' mm' },
-  { id: 'size',    vid: 'v-size',    fmt: v => v },
+  { id: 'size',    vid: 'v-size',    fmt: v => v + '%' },
   { id: 'grid',    vid: 'v-grid',    fmt: v => v },
   { id: 'explode', vid: 'v-explode', fmt: v => v + '%' },
   { id: 'tilt',    vid: 'v-tilt',    fmt: v => v + '\u00B0' },
@@ -1984,6 +1993,13 @@ function syncPerspVisibility() {
 }
 // Capture default values from HTML, wire up input + label-click-to-reset
 const sliderDefaults = {};
+// "Boring" industry-standard values — plain polygon, no twist, no rounding
+const sliderBoring = {
+  'angle': '0', 'radius': '0', 'round-edge': '0', 'round-vtx': '0',
+  'side-smooth': '0', 'thickness': '2', 'export-size': '30',
+  'size': '85', 'grid': '3', 'explode': '0',
+  'tilt': '0', 'perspective': '45', 'rotation': '0',
+};
 sliders.forEach(s => {
   const el = document.getElementById(s.id);
   sliderDefaults[s.id] = el.defaultValue;
@@ -1992,15 +2008,47 @@ sliders.forEach(s => {
     if (s.id === 'tilt') syncPerspVisibility();
     onInput();
   });
-  // Click label text to reset slider to default (animated)
+  // Click label text to reset slider to boring/zero value (animated)
   const label = el.closest('.group').querySelector('label');
   label.addEventListener('click', e => {
-    if (e.target.tagName === 'SELECT') return;  // don't hijack theme dropdown
+    if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+    if (e.target.closest('.val-input') || e.target.id === s.vid) return;
     e.preventDefault();
-    el.value = sliderDefaults[s.id];
+    el.value = sliderBoring[s.id] ?? el.min;
     document.getElementById(s.vid).textContent = s.fmt(+el.value);
     if (s.id === 'tilt') syncPerspVisibility();
     onInput();
+  });
+  // Click value span to type in a number directly
+  const valSpan = document.getElementById(s.vid);
+  valSpan.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (valSpan.querySelector('.val-input')) return;  // already editing
+    const step = +el.step;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'val-input';
+    input.value = +el.value;
+    valSpan.textContent = '';
+    valSpan.appendChild(input);
+    input.focus();
+    input.select();
+    const commit = () => {
+      let v = parseFloat(input.value);
+      if (isNaN(v)) v = +el.value;  // keep current on bad input
+      if (step >= 1) v = Math.round(v);
+      else v = Math.round(v / step) * step;
+      el.value = v;
+      valSpan.textContent = s.fmt(+el.value);
+      if (s.id === 'tilt') syncPerspVisibility();
+      onInput();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { e.preventDefault(); valSpan.textContent = s.fmt(+el.value); }
+    });
   });
 });
 document.querySelectorAll('input[type=checkbox]').forEach(cb =>
@@ -2057,7 +2105,7 @@ document.getElementById('randomize-display-btn').addEventListener('click', () =>
     return min + Math.round(Math.random() * steps) * step;
   };
   const displaySliders = [
-    { id: 'size',        vid: 'v-size',        min: 30, max: 150, step: 1, fmt: v => v },
+    { id: 'size',        vid: 'v-size',        min: 30, max: 150, step: 1, fmt: v => v + '%' },
     { id: 'explode',     vid: 'v-explode',     min: 0,  max: 30,  step: 1, fmt: v => v + '%' },
     { id: 'tilt',        vid: 'v-tilt',        min: 0,  max: 55,  step: 1, fmt: v => v + '\u00B0' },
     { id: 'perspective', vid: 'v-perspective',  min: 10, max: 60,  step: 1, fmt: v => v + '%' },
@@ -2097,7 +2145,7 @@ const DEMO_SLIDERS = [
   { key: 'sideSmooth', id: 'side-smooth', vid: 'v-side-smooth',  fmt: v => Math.round(v) + '%' },
   { key: 'thickness',  id: 'thickness',   vid: 'v-thickness',    fmt: v => (+v).toFixed(1) + ' mm' },
   { key: 'exportSize', id: 'export-size', vid: 'v-export-size',  fmt: v => Math.round(v) + ' mm' },
-  { key: 'size',       id: 'size',        vid: 'v-size',         fmt: v => Math.round(v) },
+  { key: 'size',       id: 'size',        vid: 'v-size',         fmt: v => Math.round(v) + '%' },
   { key: 'explode',    id: 'explode',     vid: 'v-explode',      fmt: v => Math.round(v) + '%' },
   { key: 'tilt',       id: 'tilt',        vid: 'v-tilt',         fmt: v => Math.round(v) + '\u00B0' },
   { key: 'perspective',id: 'perspective', vid: 'v-perspective',  fmt: v => Math.round(v) + '%' },
